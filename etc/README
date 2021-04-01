@@ -1,0 +1,16 @@
+
+leideb
+    leijava
+        aisino-p16xxxx
+        leirack
+            leihadoop
+            lei-cache       redis(memcache)
+            lei-loadbal     haproxy/keepalive
+        lei-m2
+        lei-minid
+        lei-dns
+        lei-crack?
+    lei-postgresql  -v data:/var/lib/postgresql/...
+
+leicent < centos-cn
+

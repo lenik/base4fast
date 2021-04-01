@@ -1,0 +1,4 @@
+
+deb http://httpredir.debian.org/debian/ jsessie main
+deb http://httpredir.debian.org/debian/ jsessie contrib
+deb http://httpredir.debian.org/debian/ jsessie non-free

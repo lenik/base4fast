@@ -1,0 +1,12 @@
+# @bodz::stable
+deb     [trusted=yes] http://deb.bodz.net:8100/ stable/
+# @bodz::stable-src
+deb-src [trusted=yes] http://deb.bodz.net:8100/ stable/
+# @bodz::testing
+deb     [trusted=yes] http://deb.bodz.net:8100/ testing/
+# @bodz::testing-src
+deb-src [trusted=yes] http://deb.bodz.net:8100/ testing/
+# @bodz::unstable
+deb     [trusted=yes] http://deb.bodz.net:8100/ unstable/
+# @bodz::unstable-src
+deb-src [trusted=yes] http://deb.bodz.net:8100/ unstable/

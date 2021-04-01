@@ -1,0 +1,4 @@
+
+Q: How to use docker hub mirror in china?
+    DOCKER_OPTS += --registry-mirror=http://lenik.m.daocloud.io
+

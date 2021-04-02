@@ -1,0 +1,34 @@
+docker-registry-web 部署疑难
+
+    1. 证书请求
+        在 x509v3 中新添加了 SAN 扩展项，用于匹配多域名。
+        req_extensions = SAN-section
+        [SAN-section]
+            SubjectAltName = DNS:foo.com, DNS:bar.com..
+        
+        但 openssl x509 默认不会将 csr 中的扩展项传输到 crt 中。
+        因为 x509 是一个简化的 ca 动作，ca 命令中是可以传输扩展项的。
+        解决方法有：
+            - 通过 req 直接生成自签名证书;
+            - 通过 ca 命令和完整的配置文件，比较复杂;
+            - 在 x509 命令中指定扩展项。方法： 
+                x509 ... -extfile file.cfg -extensions SAN-section
+
+        x509 man页中有提到这个BUG，但这是一个固化的BUG。很多人根本不会注意。
+        crt中没有该扩展项，会提示legacy过期错误，并只能匹配CN。
+        有了扩展项，报证书链错误，是因为docker缓存。
+        
+    2. 添加本地信任
+        
+        复制 crt 到 /usr/local/share/ca-certificates/,
+        更新缓存： sudo update-ca-certificates
+        更新docker缓存： sudo systemctl restart docker
+        客户端选项有：curl --insecure
+
+    3. web服务配置
+        
+        docker run -link registry 将 registry 和 web 组成内部LAN，
+        web 中通过 https://registry:.. 可以访问到 registry 实例。
+        通过 TRUST_ANY_SSL 接受自签名证书。拼写错误会导致 PKIX.. 错误。
+
+

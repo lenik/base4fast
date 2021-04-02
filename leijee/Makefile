@@ -3,6 +3,8 @@ include docker/container.mk
 ID = leijee
 VERSION = buster
 
+#DOCKER_BUILD_OPTS = --squash
+
 DO_PREBUILD = 
 DO_POSTBUILD = 
 

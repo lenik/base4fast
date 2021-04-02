@@ -1,6 +1,6 @@
 #!/bin/bash
 
-    dir=jdk-1.8.0.-64
+    dir="jdk-1.8.0-64"
 
     if [ -d $dir ]; then
         echo umount $dir

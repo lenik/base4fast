@@ -1,8 +1,8 @@
-FROM debian:buster
+FROM debian:bullseye
 MAINTAINER Lenik <lenik@bodz.net>
 LABEL \
     description = "Debian/GNU-Linux & uni tools" \
-    version = "1.0"
+    version = "1.11"
 
 COPY apt /etc/apt/
 RUN /etc/apt/disable_orig_lists.sh; \

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+make -C ../leijee/ -f ../leitexfj/Makefile "$@"
+

@@ -1,7 +1,7 @@
 include docker/container.mk
 
 ID = leideb
-VERSION = buster
+VERSION = bullseye
 
 DOCKER_BUILD_OPTS=--squash
 #DO_PREBUILD = 

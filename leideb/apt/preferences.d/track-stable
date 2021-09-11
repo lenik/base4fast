@@ -10,15 +10,15 @@
 
 Package: *
 Pin: release a=stable
-Pin-Priority: 990
+Pin-Priority: 1000
 
 Package: *
-Pin: release n=buster-backports
-Pin-Priority: 999
+Pin: release n=bullseye-backports
+Pin-Priority: 910
 
 Package: *
 Pin: release a=oldstable
-Pin-Priority: 980
+Pin-Priority: 900
 
 Package: *
 Pin: release a=testing

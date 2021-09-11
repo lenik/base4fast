@@ -1,14 +1,18 @@
 include docker/container.mk
 
 ID = leijee
-VERSION = buster
+VERSION = bullseye
 
-#DOCKER_BUILD_OPTS = --squash
+FROM = leideb:${VERSION}
+LABEL = Lenik's Java Web Server
 
-DO_PREBUILD = 
-DO_POSTBUILD = 
+DOCKER_BUILD_OPTS = \
+    --build-arg "FROM=${FROM}" \
+    --build-arg "LABEL=${LABEL}" \
+    --squash
 
 -run-docker:
+	echoli DUMP: $(DOCKER_BUILD_OPTS)
 	#docker pull $(REPO)/$(ID)
 	docker run $(DOCKER_RUN_OPTS) \
 	    -it \

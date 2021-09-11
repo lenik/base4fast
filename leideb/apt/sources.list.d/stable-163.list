@@ -12,10 +12,10 @@ deb-src http://mirrors.163.com/debian/ stable-updates non-free
 deb     http://mirrors.163.com/debian/ stable-updates contrib
 deb-src http://mirrors.163.com/debian/ stable-updates contrib
 
-deb     http://mirrors.163.com/debian/ buster-backports main
-deb-src http://mirrors.163.com/debian/ buster-backports main
-deb     http://mirrors.163.com/debian/ buster-backports non-free
-deb-src http://mirrors.163.com/debian/ buster-backports non-free
-deb     http://mirrors.163.com/debian/ buster-backports contrib
-deb-src http://mirrors.163.com/debian/ buster-backports contrib
+deb     http://mirrors.163.com/debian/ bullseye-backports main
+deb-src http://mirrors.163.com/debian/ bullseye-backports main
+deb     http://mirrors.163.com/debian/ bullseye-backports non-free
+deb-src http://mirrors.163.com/debian/ bullseye-backports non-free
+deb     http://mirrors.163.com/debian/ bullseye-backports contrib
+deb-src http://mirrors.163.com/debian/ bullseye-backports contrib
 

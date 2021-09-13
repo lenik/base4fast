@@ -4,13 +4,11 @@ LABEL \
     description = "Lenik's Debian with TeXLive suite" \
     version = "1.11"
 
-#RUN mkdir -p /usr/local/tex
-COPY tex /usr/local/tex
-
-RUN apt-get update; apt-get install texlive-local
-ENV PATH="/usr/local/tex/bin/x86_64-linux:$PATH" \
-    MANPATH="/usr/local/tex/texmf/doc/man:/usr/share/man" \
-    INFOPATH="/usr/local/tex/texmf/doc/info:/usr/share/info"
+# repeat a few times to fix broken downloads.
+RUN apt-get update; \
+        apt-get install --yes texlive-full; \
+        apt-get install --yes texlive-full; \
+        apt-get install --yes texlive-full
 
 # see popularity/pop-fonts, with exceptions these are not included in current release:
 #   fonts-droid-fallback xfonts-mathml
@@ -206,4 +204,6 @@ RUN apt-get install --yes \
     xfonts-terminus-oblique \
     xfonts-unifont \
     xfonts-utils
+
+RUN apt-get update; apt-get install --yes z-latex
 

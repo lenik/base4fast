@@ -1,0 +1,23 @@
+deb     http://archive.debian.org/debian/ stretch main
+deb-src http://archive.debian.org/debian/ stretch main
+deb     http://archive.debian.org/debian/ stretch non-free
+deb-src http://archive.debian.org/debian/ stretch non-free
+deb     http://archive.debian.org/debian/ stretch contrib
+deb-src http://archive.debian.org/debian/ stretch contrib
+
+deb     http://archive.debian.org/debian/ stretch-proposed-updates main
+deb-src http://archive.debian.org/debian/ stretch-proposed-updates main
+deb     http://archive.debian.org/debian/ stretch-proposed-updates non-free
+deb-src http://archive.debian.org/debian/ stretch-proposed-updates non-free
+deb     http://archive.debian.org/debian/ stretch-proposed-updates contrib
+
+deb     http://archive.debian.org/debian/ stretch-backports main
+deb-src http://archive.debian.org/debian/ stretch-backports main
+deb     http://archive.debian.org/debian/ stretch-backports non-free
+deb-src http://archive.debian.org/debian/ stretch-backports non-free
+deb     http://archive.debian.org/debian/ stretch-backports contrib
+deb-src http://archive.debian.org/debian/ stretch-backports contrib
+
+deb     http://archive.debian.org/debian-security stretch/updates main
+deb     http://archive.debian.org/debian-security stretch/updates contrib
+deb     http://archive.debian.org/debian-security stretch/updates non-free

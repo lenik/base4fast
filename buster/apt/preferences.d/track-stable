@@ -1,0 +1,37 @@
+# a=unbuster, v=8 "archiva name is ..., version is ..."
+# n=stretch* "codename starts with ..."
+# P:
+#   [1000,]     force downgrade
+#   [990..1000) come from the other release
+#   [500,990)   unless there's version belonging to the target release
+#   [100,500)   unless there's version belonging to other dist
+#   (0,100)     only if not installed
+#   (,0)        prevents
+
+Package: *
+Pin: release a=buster
+Pin-Priority: 1000
+
+Package: *
+Pin: release n=buster-backports
+Pin-Priority: 910
+
+# oldstable
+Package: *
+Pin: release a=stretch
+Pin-Priority: 900
+
+# testing
+Package: *
+Pin: release a=bullseye
+Pin-Priority: 500
+
+# unstable
+Package: *
+Pin: release a=bookworm
+Pin-Priority: 300
+
+# oldoldstable
+Package: *
+Pin: release a=jessie
+Pin-Priority: 200

@@ -1,0 +1,28 @@
+
+oldjessie
+
+This is a very old release of Debian.
+
+It's used as an environment to build C/C++ programs, in order to link against 
+old versions of system libraries. So, the result application can be run in 
+most Linux boxes.
+
+The docker image is built step by step, 
+in each step, I operate in the docker running instance, 
+rather than writing docker instructions and rebuild on that script.
+
+So, the binary image can't be re-built, because there's no docker script.
+
+-
+
+    1. install
+    
+        Just pull from the docker hub official repo:
+        docker run lenik/oldjessie
+    
+    2. maintaince
+    
+        future works on oldjessie can be done within the running instance,
+        and push to docker hub.
+
+

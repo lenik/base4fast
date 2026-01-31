@@ -1,0 +1,8 @@
+# deb http://deb-multimedia.org stable main
+# deb http://deb-multimedia.org stable non-free
+# deb http://deb-multimedia.org stable contrib
+
+deb http://ftp.kaist.ac.kr/debian-multimedia/ stable main
+deb http://ftp.kaist.ac.kr/debian-multimedia/ stable non-free
+deb http://ftp.kaist.ac.kr/debian-multimedia/ stable contrib
+

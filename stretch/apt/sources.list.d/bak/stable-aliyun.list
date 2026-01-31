@@ -1,0 +1,21 @@
+deb     http://mirrors.aliyun.com/debian/ stable main
+deb-src http://mirrors.aliyun.com/debian/ stable main
+deb     http://mirrors.aliyun.com/debian/ stable non-free
+deb-src http://mirrors.aliyun.com/debian/ stable non-free
+deb     http://mirrors.aliyun.com/debian/ stable contrib
+deb-src http://mirrors.aliyun.com/debian/ stable contrib
+
+deb     http://mirrors.aliyun.com/debian/ stable-updates main
+deb-src http://mirrors.aliyun.com/debian/ stable-updates main
+deb     http://mirrors.aliyun.com/debian/ stable-updates non-free
+deb-src http://mirrors.aliyun.com/debian/ stable-updates non-free
+deb     http://mirrors.aliyun.com/debian/ stable-updates contrib
+deb-src http://mirrors.aliyun.com/debian/ stable-updates contrib
+
+deb     http://mirrors.aliyun.com/debian/ stable-backports main
+deb-src http://mirrors.aliyun.com/debian/ stable-backports main
+deb     http://mirrors.aliyun.com/debian/ stable-backports non-free
+deb-src http://mirrors.aliyun.com/debian/ stable-backports non-free
+deb     http://mirrors.aliyun.com/debian/ stable-backports contrib
+deb-src http://mirrors.aliyun.com/debian/ stable-backports contrib
+

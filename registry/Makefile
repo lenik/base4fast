@@ -3,7 +3,7 @@ include docker/container.mk
 ID = registry
 GUEST_SHELL = /bin/ash -l
 
-SERVER_HOST = docker.bodz.net
+SERVER_HOST = localhost
 SERVER_PORT = 5000
 
 -run-docker:

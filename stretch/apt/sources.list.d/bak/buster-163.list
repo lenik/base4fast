@@ -1,0 +1,6 @@
+deb     http://mirrors.163.com/debian/ buster main
+deb-src http://mirrors.163.com/debian/ buster main
+deb     http://mirrors.163.com/debian/ buster non-free
+deb-src http://mirrors.163.com/debian/ buster non-free
+deb     http://mirrors.163.com/debian/ buster contrib
+deb-src http://mirrors.163.com/debian/ buster contrib

@@ -1,14 +1,14 @@
 FROM debian:stretch
-MAINTAINER Lenik <lenik@bodz.net>
 LABEL \
+    maintainer = "Lenik <lenik@bodz.net>" \
     description = "Debian/GNU-Linux & uni tools" \
-    version = "1.11"
+    version = "2.0"
 
-COPY apt /etc/apt/
-RUN /etc/apt/disable_orig_lists.sh; \
-    apt-get update
+RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb http://archive.debian.org/debian-security stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y \
         bash \
         bash-completion \
         ca-certificates \
@@ -37,8 +37,9 @@ RUN sed -i \
     locale-gen
 
 COPY apt/sources.list.d/bodz.list /etc/apt/sources.list.d/
+RUN apt-get update && apt-get upgrade -y
 
-COPY jdk-1.8.0/ /opt/java/jdk-1.8.0
+COPY jdk-11.0.30 /opt/java/jdk-11.0.30
 
 COPY bash.bashrc /etc
 COPY docker-clean /etc/apt/apt.conf.d

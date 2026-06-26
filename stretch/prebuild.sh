@@ -1,12 +1,12 @@
 #!/bin/bash
 
-    dir=jdk-1.8.0
-
-    if [ ! -d "$dir/bin" ]; then
-        mkdir -vp $dir
-        echo mount -t auto -o bind /opt/java/jdk-1.8.0 $dir
-        sudo mount -t auto -o bind /opt/java/jdk-1.8.0 $dir
-    fi
+    for dir in jdk-11.0.30; do
+        if [ ! -d "$dir/bin" ]; then
+            mkdir -vp $dir
+            echo mount -t auto -o bind /opt/java/$dir $dir
+            sudo mount -t auto -o bind /opt/java/$dir $dir
+        fi
+    done
 
     cp -a $HOME/.ssh/authorized_keys .
 

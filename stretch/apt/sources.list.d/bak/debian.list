@@ -1,4 +1,4 @@
 
-deb http://httpredir.debian.org/debian/ jsessie main
-deb http://httpredir.debian.org/debian/ jsessie contrib
-deb http://httpredir.debian.org/debian/ jsessie non-free
+deb http://httpredir.debian.org/debian/ stretch main
+deb http://httpredir.debian.org/debian/ stretch contrib
+deb http://httpredir.debian.org/debian/ stretch non-free

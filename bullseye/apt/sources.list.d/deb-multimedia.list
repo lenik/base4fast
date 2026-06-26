@@ -1,0 +1,8 @@
+# deb http://deb-multimedia.org bullseye main
+# deb http://deb-multimedia.org bullseye non-free
+# deb http://deb-multimedia.org bullseye contrib
+
+deb http://ftp.kaist.ac.kr/debian-multimedia/ bullseye main
+deb http://ftp.kaist.ac.kr/debian-multimedia/ bullseye non-free
+deb http://ftp.kaist.ac.kr/debian-multimedia/ bullseye contrib
+

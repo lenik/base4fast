@@ -1,6 +1,0 @@
-deb     http://mirrors.163.com/debian/ testing main
-deb-src http://mirrors.163.com/debian/ testing main
-deb     http://mirrors.163.com/debian/ testing non-free
-deb-src http://mirrors.163.com/debian/ testing non-free
-deb     http://mirrors.163.com/debian/ testing contrib
-deb-src http://mirrors.163.com/debian/ testing contrib

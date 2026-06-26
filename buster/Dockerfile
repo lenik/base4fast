@@ -1,127 +1,28 @@
 FROM debian:buster
-MAINTAINER Lenik <lenik@bodz.net>
 LABEL \
+    maintainer = "Lenik <lenik@bodz.net>" \
     description = "Debian/GNU-Linux & uni tools" \
-    version = "1.11"
+    version = "2.0"
 
-COPY apt /etc/apt/
-RUN /etc/apt/disable_orig_lists.sh; \
-    apt-get update
-RUN apt-get install -y --force-yes \
-        2tree \
-        ai-utils \
-        apache2-enh \
-        apt-enh \
-        ascgen \
-        autover \
-        bash-alias \
-        bash-enh \
-        bash-ex \
-        bash-shlib \
-        catme \
-        cdtree \
-        configutils \
-        coolauto \
-        coolclip \
-        coolcmd \
-        cooldeb \
-        cooldiff \
-        coolgen \
-        coolhex \
-        coollog \
-        coolmake \
-        coolpdf \
-        coolqt \
-        coolrpm \
-        coolsql \
-        cooltask \
-        cooltex \
-        cooltext \
-        coolutils \
-        cwdex \
-        debinst \
-        dejar \
-        diskutils \
-        dltools \
-        do-mount \
-        dprog \
-        emacs-pref-xjl \
-        eplutils \
-        err-demux \
-        esperanto-dict \
-        filestats \
-        fileutils-xjl \
-        gcc-enh \
-        gcdutils \
-        git-enh \
-        git-fat \
-        gpg-enh \
-        grepl \
-        hackscripts \
-        imgauto \
-        ini-utils \
-        isoutils \
-        isz-tool \
-        jad \
-        laxar \
-        lddd \
-        libbas-c \
-        libbas-d-dev \
-        libcmt-perl \
-        libcpf \
-        libcpf-dev \
-        libdog-dev \
-        libm4-xjl \
-        libsqltiger-postgresql \
-        libuni-java \
-        lilygen \
-        m2proj \
-        mjpl \
-        mkchm \
-        mksize \
-        modcmds \
-        mountfile \
-        ms-sys \
-        msync \
-        nameutils \
-        npm-enh \
-        onoff \
-        openssl-enh \
-        patchbuild \
-        pingmon \
-        python-enh \
-        quickweb \
-        repl \
-        repos-styles \
-        rrdtool-enh \
-        rsync-rrc \
-        screen-enh \
-        shelj \
-        sox-enh \
-        sqlite-enh \
-        squashfs-enh \
-        ssh-enh \
-        symlinkutils \
-        textcodecs \
-        ttc2ttf \
-        ttfutils \
-        tty-fx \
-        usecode \
-        vcscmds \
-        vexmount \
-        vim \
-        vim-enh \
-        visualcss \
-        whichm \
-        whoare \
-        winedit \
-        x509utils \
-        xmlproc \
-        xmlutils \
-        yapp-enh \
-        zhspeak \
-        ziputils \
-        z-latex
+COPY apt/sources.list.d/debian.list /etc/apt/sources.list.d/
+RUN rm /etc/apt/sources.list && apt-get update && apt-get install -y aptitude && \
+    aptitude full-upgrade -y && \
+    aptitude install -y \
+        bash \
+        bash-completion \
+        ca-certificates \
+        curl \
+        git \
+        git-man \
+        gnupg \
+        iproute2 \
+        less \
+        locales \
+        man-db \
+        manpages \
+        manpages-dev \
+        nano \
+        procps
 
 ENV LANG en_US.utf8
 RUN sed -i \
@@ -135,11 +36,9 @@ RUN sed -i \
     locale-gen
 
 COPY apt/sources.list.d/bodz.list /etc/apt/sources.list.d/
+RUN apt-get update && aptitude full-upgrade -y
 
-COPY jdk-1.8.0/ /opt/java/jdk-1.8.0
-RUN apt-get install -y --force-yes \
-    coolmaven \
-    jdk-local
+COPY jdk-17.0.12 /opt/java/jdk-17.0.12
 
 COPY bash.bashrc /etc
 COPY docker-clean /etc/apt/apt.conf.d

@@ -10,7 +10,6 @@ deb-src http://mirrors.163.com/debian-archive/debian/ buster-updates main
 deb     http://mirrors.163.com/debian-archive/debian/ buster-updates non-free
 deb-src http://mirrors.163.com/debian-archive/debian/ buster-updates non-free
 deb     http://mirrors.163.com/debian-archive/debian/ buster-updates contrib
-deb-src http://mirrors.163.com/debian-archive/debian/ buster-updates contrib
 
 deb     http://mirrors.163.com/debian-archive/debian/ buster-backports main
 deb-src http://mirrors.163.com/debian-archive/debian/ buster-backports main

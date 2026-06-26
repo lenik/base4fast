@@ -1,18 +1,27 @@
+# syntax=docker/dockerfile:1
+ARG VERSION=2.0
+
 FROM debian:stretch
-LABEL \
-    maintainer = "Lenik <lenik@bodz.net>" \
-    description = "Debian/GNU-Linux & uni tools" \
-    version = "2.0"
 
-RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list && \
-    echo "deb http://archive.debian.org/debian-security stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
+ARG VERSION
 
-RUN apt-get update && apt-get install -y \
+LABEL maintainer="Lenik <lenik@bodz.net>"
+LABEL description="Debian/GNU-Linux & uni tools"
+LABEL version=${VERSION}
+
+# Install basic system, networking, and utility tools.
+# BuildKit cache mounts are leveraged to store package metadata and downloaded .deb layers persistently on the host, 
+# significantly speeding up subsequent rebuilds while keeping the final image layers lightweight.
+RUN --mount=type=cache,id=stretch,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=stretch,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=bind,source=etc,target=/tmp/src_etc \
+    cp /tmp/src_etc/apt/sources.list /etc/apt/ && \
+    apt-get update && apt-get install -y \
         bash \
         bash-completion \
         ca-certificates \
         curl \
+        findutils \
         git \
         git-man \
         gnupg \
@@ -23,32 +32,49 @@ RUN apt-get update && apt-get install -y \
         manpages \
         manpages-dev \
         nano \
-        procps
+        procps \
+        rsync && \
+    rsync -av /tmp/src_etc/ /etc/ && \
+    apt-get update && apt-get upgrade -y
 
-ENV LANG en_US.utf8
-RUN sed -i \
+# Configure language locales for international environments (English, Chinese, Japanese, Korean, Thai).
+ENV TZ=Asia/Shanghai
+ENV LANG=en_US.utf8
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
+    && sed -i \
+        -e '/ar_EG.UTF-8/s/^# //g' \
+        -e '/de_DE.UTF-8/s/^# //g' \
         -e '/en_US.UTF-8/s/^# //g' \
-        -e '/zh_CN.UTF-8/s/^# //g' \
-        -e '/zh_TW.UTF-8/s/^# //g' \
+        -e '/eo.UTF-8/s/^# //g' \
+        -e '/he_IL.UTF-8/s/^# //g' \
+        -e '/it_IT.UTF-8/s/^# //g' \
         -e '/ja_JP.UTF-8/s/^# //g' \
         -e '/ko_KR.UTF-8/s/^# //g' \
+        -e '/ru_RU.UTF-8/s/^# //g' \
         -e '/th_TH.UTF-8/s/^# //g' \
-        /etc/locale.gen && \
-    locale-gen
+        -e '/vi_VN.UTF-8/s/^# //g' \
+        -e '/zh_CN.UTF-8/s/^# //g' \
+        -e '/zh_TW.UTF-8/s/^# //g' \
+        /etc/locale.gen \
+    && locale-gen
 
-COPY apt/sources.list.d/bodz.list /etc/apt/sources.list.d/
-RUN apt-get update && apt-get upgrade -y
+# Deploy the localized Java Development Kit deployment package.
+COPY --from=host_opt ./java/jdk-11 /opt/java/jdk-11
 
-COPY jdk-11.0.30 /opt/java/jdk-11.0.30
-
-COPY bash.bashrc /etc
-COPY docker-clean /etc/apt/apt.conf.d
-
+# Set up specific GIDs/UIDs for system users and provisions the primary non-root development user account ('lenik').
 RUN groupadd --gid 700 dev; \
     groupmod --gid 300 wget; \
     usermod --uid 300 wget; \
-    useradd --uid 999 -g dev -m -p l. lenik; \
-    mkdir /home/lenik/.ssh
-COPY authorized_keys /home/lenik/.ssh
+    useradd --uid 999 -g dev -m -p l. lenik
 
+# Provision Secure Shell (SSH) access permissions for the development user.
+# Strict POSIX permission sets (700 and 600) are explicitly defined to prevent SSH authorization rejection faults.
+RUN mkdir -p /home/lenik/.ssh && chmod 700 /home/lenik/.ssh
+COPY --chown=lenik:dev authorized_keys /home/lenik/.ssh/authorized_keys
+RUN chmod 600 /home/lenik/.ssh/authorized_keys
+
+# Initialize an interactive bash instance as the runtime entry point.
 ENTRYPOINT ["/bin/bash", "-i"]
+

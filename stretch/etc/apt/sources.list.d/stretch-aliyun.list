@@ -1,0 +1,7 @@
+deb     http://mirrors.aliyun.com/debian-archive/debian/ stretch main
+deb-src http://mirrors.aliyun.com/debian-archive/debian/ stretch main
+deb     http://mirrors.aliyun.com/debian-archive/debian/ stretch non-free
+deb-src http://mirrors.aliyun.com/debian-archive/debian/ stretch non-free
+deb     http://mirrors.aliyun.com/debian-archive/debian/ stretch contrib
+deb-src http://mirrors.aliyun.com/debian-archive/debian/ stretch contrib
+

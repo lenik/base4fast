@@ -1,25 +1,72 @@
 # syntax=docker/dockerfile:1
 ARG VERSION=2.0
+ARG DISTRO_SPEC=debian:stretch
+# EOL suites: archive only has the release pocket (no updates/backports/security
+# under debian-archive/debian for stretch). Keep archive-security.list separately.
+ARG LRM_BWSEL_OPTS="--no-security --no-updates --no-backports --no-src"
 
 FROM debian:stretch
 
 ARG VERSION
+ARG DISTRO_SPEC
+ARG LRM_BWSEL_OPTS="--no-security --no-updates --no-backports --no-src"
 
 LABEL maintainer="Lenik <lenik@bodz.net>"
 LABEL description="Debian/GNU-Linux & uni tools"
 LABEL version=${VERSION}
 
-# Install basic system, networking, and utility tools.
-# BuildKit cache mounts are leveraged to store package metadata and downloaded .deb layers persistently on the host, 
-# significantly speeding up subsequent rebuilds while keeping the final image layers lightweight.
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/usr/local/bin:${PATH}"
+ENV LRM_GETBAR=getbar
+
+# ---------------------------------------------------------------------------
+# 1. Bootstrap apt (archive) — only enough to run lrm/getbar selection.
+#    Do not install libcurl3 here: security updates must come from the same
+#    pocket as later packages to avoid curl/libcurl3 version skew.
+# ---------------------------------------------------------------------------
 RUN --mount=type=cache,id=stretch,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=stretch,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=bind,source=etc,target=/tmp/src_etc \
-    cp /tmp/src_etc/apt/sources.list /etc/apt/ && \
-    apt-get update && apt-get install -y \
+    cp /tmp/src_etc/apt/bootstrap/sources.list /etc/apt/sources.list \
+    && cp -a /tmp/src_etc/apt/apt.conf.d/. /etc/apt/apt.conf.d/ \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
         bash \
-        bash-completion \
         ca-certificates \
+    && rm -f /etc/apt/sources.list
+
+# ---------------------------------------------------------------------------
+# 2. Suite-specific getbar/lrm (built on host with build4 → vendor/)
+# ---------------------------------------------------------------------------
+COPY vendor/ /usr/local/
+RUN ldconfig \
+    && chmod +x /usr/local/bin/getbar /usr/local/bin/lrm \
+           /usr/local/bin/apt-via-lrm.sh /usr/local/bin/apt-bootstrap-ca.sh \
+    && (test -x /usr/local/bin/drm && chmod +x /usr/local/bin/drm || true) \
+    && lrm --version
+
+# ---------------------------------------------------------------------------
+# 3. Select fastest mirror with lrm bwsel (inside the image)
+# ---------------------------------------------------------------------------
+RUN apt-via-lrm.sh "${DISTRO_SPEC}" ${LRM_BWSEL_OPTS}
+
+# ---------------------------------------------------------------------------
+# 4. Refresh from selected mirror + archive-security, then install runtime
+#    deps for getbar and remaining essentials.
+# ---------------------------------------------------------------------------
+RUN --mount=type=cache,id=stretch-v2,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=stretch-v2,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=bind,source=etc,target=/tmp/src_etc \
+    apt-bootstrap-ca.sh \
+    && cp /tmp/src_etc/apt/sources.list.d/archive-security.list /etc/apt/sources.list.d/ \
+    && apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        libcurl3 \
+        libglib2.0-0 \
+        libicu57 \
+        zlib1g \
+        bash-completion \
         curl \
         findutils \
         git \
@@ -33,9 +80,10 @@ RUN --mount=type=cache,id=stretch,target=/var/cache/apt,sharing=locked \
         manpages-dev \
         nano \
         procps \
-        rsync && \
-    rsync -av /tmp/src_etc/ /etc/ && \
-    apt-get update && apt-get upgrade -y
+        rsync \
+    && getbar --version \
+    && rsync -av --exclude bak --exclude bootstrap /tmp/src_etc/ /etc/ \
+    && apt-get update
 
 # Configure language locales for international environments (English, Chinese, Japanese, Korean, Thai).
 ENV TZ=Asia/Shanghai
@@ -77,4 +125,3 @@ RUN chmod 600 /home/lenik/.ssh/authorized_keys
 
 # Initialize an interactive bash instance as the runtime entry point.
 ENTRYPOINT ["/bin/bash", "-i"]
-

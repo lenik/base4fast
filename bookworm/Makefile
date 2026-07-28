@@ -1,9 +1,17 @@
-bake:
+BUILD4 ?= /home/cursor/dockers/build4/build4
+
+.PHONY: tools bake build buildx
+
+tools:
+	BUILD4="$(BUILD4)" ../common/build-lrm-tools.sh bookworm
+
+bake: tools
 	docker buildx bake
 
-build:
+build: tools
 	docker compose build
 
-buildx:
-	docker buildx build --build-context host_opt=/opt .
-
+buildx: tools
+	docker buildx build \
+		--build-context host_opt=/opt \
+		.

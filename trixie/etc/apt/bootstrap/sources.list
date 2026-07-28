@@ -1,0 +1,3 @@
+deb http://mirrors.aliyun.com/debian/ trixie main contrib non-free non-free-firmware
+deb http://mirrors.aliyun.com/debian/ trixie-updates main contrib non-free non-free-firmware
+deb http://mirrors.aliyun.com/debian-security trixie-security main contrib non-free non-free-firmware

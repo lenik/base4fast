@@ -1,4 +1,4 @@
+deb     http://deb.debian.org/debian trixie main contrib non-free
+deb-src http://deb.debian.org/debian trixie main contrib non-free
 
-deb http://httpredir.debian.org/debian/ trixie main
-deb http://httpredir.debian.org/debian/ trixie contrib
-deb http://httpredir.debian.org/debian/ trixie non-free
+deb     http://security.debian.org/debian-security trixie-security main contrib non-free

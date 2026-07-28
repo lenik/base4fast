@@ -1,0 +1,4 @@
+
+deb http://httpredir.debian.org/debian/ trixie main
+deb http://httpredir.debian.org/debian/ trixie contrib
+deb http://httpredir.debian.org/debian/ trixie non-free

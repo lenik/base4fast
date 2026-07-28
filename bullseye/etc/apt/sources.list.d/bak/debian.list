@@ -1,4 +1,4 @@
+deb     http://deb.debian.org/debian bullseye main contrib non-free
+deb-src http://deb.debian.org/debian bullseye main contrib non-free
 
-deb http://httpredir.debian.org/debian/ bullseye main
-deb http://httpredir.debian.org/debian/ bullseye contrib
-deb http://httpredir.debian.org/debian/ bullseye non-free
+deb     http://security.debian.org/debian-security bullseye-security main contrib non-free

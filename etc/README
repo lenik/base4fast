@@ -12,5 +12,7 @@ leideb
         lei-crack?
     lei-postgresql  -v data:/var/lib/postgresql/...
 
-leicent < centos-cn
-
+base4fast
+    debian/{stretch,buster,bullseye,bookworm,trixie}
+    ubuntu/{xenial,bionic,focal,jammy,noble,resolute}
+    centos/{5,6,7,8,s9,s10}

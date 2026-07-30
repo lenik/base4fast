@@ -1,0 +1,8 @@
+services:
+  base-image:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      additional_contexts:
+        host_opt: /opt
+    image: base4fast:ubuntu-jammy

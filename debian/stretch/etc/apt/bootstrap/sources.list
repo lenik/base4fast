@@ -1,0 +1,4 @@
+deb http://mirror.nju.edu.cn/debian-archive/debian/ stretch main contrib non-free
+deb-src http://mirror.nju.edu.cn/debian-archive/debian/ stretch main contrib non-free
+deb http://mirror.nju.edu.cn/debian-archive/debian-security stretch/updates main contrib non-free
+deb-src http://mirror.nju.edu.cn/debian-archive/debian-security stretch/updates main contrib non-free

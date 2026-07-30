@@ -1,0 +1,3 @@
+# Archive security (lrm bwsel uses --no-security on EOL suites)
+deb     http://mirror.nju.edu.cn/debian-archive/debian-security stretch/updates main contrib non-free
+deb-src http://mirror.nju.edu.cn/debian-archive/debian-security stretch/updates main contrib non-free

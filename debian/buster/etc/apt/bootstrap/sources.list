@@ -1,0 +1,6 @@
+deb http://mirror.nju.edu.cn/debian-archive/debian/ buster main contrib non-free
+deb-src http://mirror.nju.edu.cn/debian-archive/debian/ buster main contrib non-free
+deb http://mirror.nju.edu.cn/debian-archive/debian/ buster-updates main contrib non-free
+deb-src http://mirror.nju.edu.cn/debian-archive/debian/ buster-updates main contrib non-free
+deb http://mirror.nju.edu.cn/debian-archive/debian-security buster/updates main contrib non-free
+deb-src http://mirror.nju.edu.cn/debian-archive/debian-security buster/updates main contrib non-free

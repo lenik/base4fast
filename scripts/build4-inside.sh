@@ -22,6 +22,13 @@ fi
 
 PREFIX=/out
 BUILD=/tmp/lrm-build
+
+# GCC 4.x on EL7 defaults to C89; bas-c needs C99 for-loop declarations.
+if [[ -f /etc/redhat-release ]] && grep -qE 'release 7\b' /etc/redhat-release 2>/dev/null; then
+  log "EL7 detected — forcing CFLAGS=-std=gnu99"
+  export CFLAGS="${CFLAGS:+$CFLAGS }-std=gnu99"
+  export CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-std=gnu++11"
+fi
 rm -rf "$BUILD"
 mkdir -p "$BUILD" "$PREFIX"
 
@@ -161,12 +168,33 @@ else
   log "warning: /src/includes missing; bas-c configure may fail on Meson ≥0.47"
 fi
 
+# SUSE ICU: ELF SONAME is libicuuc.so.N but file is often libicuuc.so.suseN.1
+if [[ -d /usr/lib64 ]]; then
+  shopt -s nullglob
+  for real in /usr/lib64/libicu*.so.suse*; do
+    base=$(basename "$real")
+    if [[ "$base" =~ ^(libicu[a-z]+)\.so\.suse([0-9]+) ]]; then
+      soname="${BASH_REMATCH[1]}.so.${BASH_REMATCH[2]}"
+      if [[ ! -e "/usr/lib64/$soname" ]]; then
+        log "ICU soname symlink: /usr/lib64/$soname -> $base"
+        ln -sfn "$base" "/usr/lib64/$soname"
+      fi
+    fi
+  done
+  shopt -u nullglob
+fi
+
 log "building bas-c"
 # Stretch Meson 0.37 only accepts warning_level 1|2|3 (not 0).
 # Do not pass -Ddefault_library=both: on Meson ≥0.46 `library()` already
 # emits both shared+static under that option, which then clashes with our
 # explicit static_library('bas-c').
 bas_c_opts=(--prefix="$PREFIX" --libdir=lib)
+# EL7 GCC 4.8 defaults to C89; force C99 for bas-c for-loop decls.
+if [[ -f /etc/redhat-release ]] && grep -qE "release 7\b" /etc/redhat-release 2>/dev/null; then
+  log "EL7: meson -Dc_args=-std=gnu99"
+  bas_c_opts+=(-Dc_args=-std=gnu99)
+fi
 if [[ "$meson_major" -eq 0 && "$meson_minor" -lt 40 ]]; then
   sed -i "s/warning_level=0/warning_level=1/g" "$BUILD/bas-c/meson.build" || true
   bas_c_opts+=(-Dwarning_level=1)

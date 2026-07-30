@@ -84,11 +84,10 @@ default_target() {
     ;;
   sles)
     case "$SUITE" in
-    # opensuse/13.2 removed from Docker Hub; build tools on Leap 15.1 (runtime may still use archive twin).
-    11) printf 'opensuse/leap:15.1\n' ;;
-    12) printf 'registry.suse.com/suse/sles12sp5:latest\n' ;;
-    15.1) printf 'opensuse/leap:15.1\n' ;;
-    16.1) printf 'registry.suse.com/bci/bci-base:16.1\n' ;;
+    # Leap twins for 12/15 (glibc pin); 11 dropped. 16 stays on BCI.
+    12.1) printf 'opensuse/archive:42.1\n' ;;
+    15.2) printf 'opensuse/leap:15.2\n' ;;
+    16.2) printf 'registry.suse.com/bci/bci-base:16.1\n' ;;
     *) die "unknown sles suite: $SUITE" ;;
     esac
     ;;
@@ -208,6 +207,30 @@ if [[ -n "$HOST_NINJA" && -x "$HOST_NINJA" ]]; then
   log "mounting host ninja $($HOST_NINJA --version 2>/dev/null | head -1) → /usr/local/bin/ninja"
 fi
 
+HOST_WHEELS="$scriptsdir/build4-bins/wheels"
+if [[ -d "$HOST_WHEELS" ]]; then
+  vols+=(-v "$HOST_WHEELS:/src/build4-wheels:ro")
+  log "mounting pip wheels from $HOST_WHEELS"
+fi
+
+HOST_RPMS="$scriptsdir/build4-bins/rpms"
+if [[ -d "$HOST_RPMS" ]]; then
+  vols+=(-v "$HOST_RPMS:/src/build4-rpms:ro")
+  log "mounting bootstrap rpms from $HOST_RPMS"
+fi
+
+HOST_LEAP42_REPO="$scriptsdir/build4-bins/leap42.1-repo"
+if [[ -d "$HOST_LEAP42_REPO/x86_64" ]]; then
+  vols+=(-v "$HOST_LEAP42_REPO:/src/leap42.1-repo:ro")
+  log "mounting local Leap 42.1 repo from $HOST_LEAP42_REPO"
+fi
+
+HOST_BOOTSTRAP="$scriptsdir/build4-bins/bootstrap"
+if [[ -d "$HOST_BOOTSTRAP" ]]; then
+  vols+=(-v "$HOST_BOOTSTRAP:/src/build4-bootstrap:ro")
+  log "mounting bootstrap files from $HOST_BOOTSTRAP"
+fi
+
 case "$FAMILY" in
 debian|ubuntu)
   cp -a "$scriptsdir/build4-prescript.sh" "$WORK/prescript.sh"
@@ -248,13 +271,43 @@ centos|rocky)
 sles)
   cp -a "$scriptsdir/build4-prescript-zypper.sh" "$WORK/prescript.sh"
   chmod +x "$WORK/prescript.sh"
-  bootstrap_repo="$SUITE_DIR/etc/zypp/bootstrap/lrm-bootstrap.repo"
-  [[ -f "$bootstrap_repo" ]] || die "missing $bootstrap_repo (bootstrap zypp repos for build4)"
-  log "zypp bootstrap from sles/${SUITE} (TARGET=$TARGET)"
-  rm -rf "$WORK/zypp.repos.d"
-  mkdir -p "$WORK/zypp.repos.d"
-  cp -a "$bootstrap_repo" "$WORK/zypp.repos.d/lrm-bootstrap.repo"
-  vols+=(-v "$WORK/zypp.repos.d:/etc/zypp/repos.d:ro")
+  # BCI images already ship SLE_BCI; overlaying Leap bootstrap causes solver conflicts.
+  zypp_conf="$scriptsdir/zypp-conf/zypp.conf"
+  if [[ -f "$zypp_conf" ]]; then
+    vols+=(-v "$zypp_conf:/etc/zypp/zypp.conf:ro")
+    log "mounting zypp.conf (allowDowngrade) for sles/${SUITE}"
+  fi
+  # Persist zypper package cache across build4 runs (build4 itself omits zypp).
+  zypp_cache="${HOME}/.cache/build4/zypp-${FAMILY}-${SUITE}"
+  mkdir -p "$zypp_cache"
+  vols+=(-v "$zypp_cache:/var/cache/zypp")
+  log "mounting zypp cache $zypp_cache"
+  if [[ "$SUITE" == 16.* ]]; then
+    log "sles/${SUITE}: keep image SLE_BCI repos (no leap bootstrap overlay)"
+  else
+    bootstrap_repo="$SUITE_DIR/etc/zypp/bootstrap/lrm-bootstrap.repo"
+    [[ -f "$bootstrap_repo" ]] || die "missing $bootstrap_repo (bootstrap zypp repos for build4)"
+    log "zypp bootstrap from sles/${SUITE} (TARGET=$TARGET)"
+    rm -rf "$WORK/zypp.repos.d"
+    mkdir -p "$WORK/zypp.repos.d"
+    cp -a "$bootstrap_repo" "$WORK/zypp.repos.d/lrm-bootstrap.repo"
+    # Prefer axel-prefetched local Leap repo when mounted (N=16, >1MB/s host download).
+    if [[ -d "$scriptsdir/build4-bins/leap42.1-repo/x86_64/repodata" ]]; then
+      cat > "$WORK/zypp.repos.d/lrm-local.repo" <<'REPO'
+[lrm-local-oss]
+name=lrm local Leap 42.1 OSS (prefetched)
+enabled=1
+autorefresh=0
+baseurl=file:///src/leap42.1-repo/x86_64
+type=rpm-md
+gpgcheck=0
+keeppackages=1
+priority=1
+REPO
+      log "added lrm-local.repo → file:///src/leap42.1-repo/x86_64"
+    fi
+    vols+=(-v "$WORK/zypp.repos.d:/etc/zypp/repos.d:ro")
+  fi
   ;;
 esac
 

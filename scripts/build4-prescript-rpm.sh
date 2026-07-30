@@ -4,6 +4,9 @@
 # Yum/dnf sources come from the suite bootstrap repo mounted by build-lrm-tools.sh.
 
 set -euo pipefail
+# PyPI: host privoxy often 503s files.pythonhosted.org; use direct HTTPS.
+unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy 2>/dev/null || true
+export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-300}"
 
 log() { printf 'build4-prescript-rpm: %s\n' "$*" >&2; }
 die() { printf 'build4-prescript-rpm: error: %s\n' "$*" >&2; exit 1; }
@@ -126,7 +129,23 @@ ensure_meson_ninja() {
   # Meson still missing — pip. Prefer keeping a working mounted ninja.
   log "meson missing from repos — installing via pip"
   ensure_pip
-  python3 -m pip install --upgrade pip setuptools wheel
+  # Prefer aliyun PyPI when reachable (faster / more reliable than pythonhosted via WAN).
+  if [[ -z "${PIP_INDEX_URL:-}" ]]; then
+    export PIP_INDEX_URL="https://mirrors.aliyun.com/pypi/simple/"
+    export PIP_TRUSTED_HOST="mirrors.aliyun.com"
+  fi
+  python3 -m pip install --upgrade pip setuptools wheel || true
+  pip_install() {
+    local wheels=/src/build4-wheels
+    local -a args=(--default-timeout="${PIP_DEFAULT_TIMEOUT:-300}" --retries=10)
+    if [[ -d "$wheels" ]] && compgen -G "$wheels"/*.whl >/dev/null 2>&1; then
+      log "pip install from mounted wheels ($wheels)"
+      python3 -m pip install "${args[@]}" --no-index --find-links="$wheels" "$@" \
+        || python3 -m pip install "${args[@]}" "$@"
+    else
+      python3 -m pip install "${args[@]}" "$@"
+    fi
+  }
   # CentOS 7 ships Python 3.6; Meson 0.62+ needs 3.7+. Pin 0.61.5 for <3.7.
   local _need_ninja=1
   if [[ -x /usr/local/bin/ninja ]] && /usr/local/bin/ninja --version >/dev/null 2>&1; then
@@ -135,22 +154,19 @@ ensure_meson_ninja() {
   if python3 -c 'import sys; raise SystemExit(0 if sys.version_info < (3, 7) else 1)'; then
     log "Python < 3.7 detected — pinning meson==0.61.5 (last with 3.6 support)"
     if [[ "$_need_ninja" -eq 1 ]]; then
-      python3 -m pip install 'meson==0.61.5' ninja \
-        || die "pip install meson ninja failed"
+      pip_install 'meson==0.61.5' ninja || die "pip install meson ninja failed"
     else
-      python3 -m pip install 'meson==0.61.5' \
-        || die "pip install meson failed"
+      pip_install 'meson==0.61.5' || die "pip install meson failed"
     fi
   else
     if [[ "$_need_ninja" -eq 1 ]]; then
-      python3 -m pip install 'meson>=0.54' ninja \
-        || die "pip install meson ninja failed"
+      pip_install 'meson>=0.54' ninja || die "pip install meson ninja failed"
     else
-      python3 -m pip install 'meson>=0.54' \
-        || die "pip install meson failed"
+      pip_install 'meson>=0.54' || die "pip install meson failed"
     fi
   fi
 }
+
 
 link_ninja() {
   if ! command -v ninja >/dev/null 2>&1 && command -v ninja-build >/dev/null 2>&1; then

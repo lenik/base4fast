@@ -3,7 +3,7 @@
 # Must run before package installs in China; never keep vendor default repos.
 #
 # Usage: zypper-via-lrm.sh DISTRO_SPEC [bwsel options...]
-#   DISTRO_SPEC  e.g. sles:15.1, sles:16.1, opensuse:15.6
+#   DISTRO_SPEC  e.g. sles:15.2, sles:16.2, opensuse:15.6
 #   extra args   forwarded to `lrm bwsel`
 
 set -euo pipefail

@@ -18,3 +18,18 @@ baseurl=https://mirrors.huaweicloud.com/centos-stream/9-stream/AppStream/$basear
 gpgcheck=0
 enabled=1
 skip_if_unavailable=1
+
+[lrm-bootstrap-crb]
+name=lrm bootstrap CentOS Stream 9 CRB
+baseurl=https://mirrors.aliyun.com/centos-stream/9-stream/CRB/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-epel]
+name=lrm bootstrap EPEL 9
+baseurl=https://mirrors.aliyun.com/epel/9/Everything/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/epel/9/Everything/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

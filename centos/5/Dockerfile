@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG VERSION=2.0
+ARG VERSION=1.0
 ARG DISTRO_SPEC=centos:5
 
 FROM quay.io/centos/centos:5

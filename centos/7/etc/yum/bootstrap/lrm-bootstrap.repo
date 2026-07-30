@@ -17,3 +17,10 @@ baseurl=https://mirrors.tuna.tsinghua.edu.cn/centos-vault/7.9.2009/updates/$base
 gpgcheck=0
 enabled=1
 skip_if_unavailable=1
+
+[lrm-bootstrap-epel]
+name=lrm bootstrap EPEL 7
+baseurl=https://mirrors.aliyun.com/epel/7/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/epel/7/$basearch/
+gpgcheck=0
+enabled=1

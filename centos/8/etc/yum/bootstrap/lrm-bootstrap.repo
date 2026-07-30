@@ -10,3 +10,16 @@ baseurl=https://mirrors.aliyun.com/centos-vault/8.5.2111/AppStream/$basearch/os/
 gpgcheck=0
 enabled=1
 
+
+[lrm-bootstrap-powertools]
+name=lrm bootstrap CentOS 8 PowerTools
+baseurl=https://mirrors.aliyun.com/centos-vault/8.5.2111/PowerTools/$basearch/os/
+gpgcheck=0
+enabled=1
+
+[lrm-bootstrap-epel]
+name=lrm bootstrap EPEL 8
+baseurl=https://mirrors.aliyun.com/epel/8/Everything/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/epel/8/Everything/$basearch/
+gpgcheck=0
+enabled=1

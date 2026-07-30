@@ -55,7 +55,7 @@ make bake           # builds suite-local vendor/ tools, then docker buildx bake
 # or: make build / make buildx
 ```
 
-`make tools` alone only compiles getbar/lrm into `<family>/<suite>/vendor/` (gitignored). Details: [`common/README.md`](common/README.md).
+`make tools` alone only compiles getbar/lrm into `<family>/<suite>/vendor/` (gitignored). Details: [`scripts/README.md`](scripts/README.md).
 
 ## Layout
 
@@ -71,7 +71,7 @@ centos/<suite>/          # CentOS / Stream family
   etc/                   # apt or yum bootstrap + bashrc
   vendor/                # build4 output (not committed)
 
-common/                  # shared build4 helpers, apt-via-lrm / yum-via-lrm
+scripts/                 # shared build4 helpers, apt-via-lrm / yum-via-lrm
 ```
 
 JDK is copied from the host via build context `host_opt=/opt`.

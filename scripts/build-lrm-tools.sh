@@ -5,25 +5,26 @@
 # Usage: build-lrm-tools.sh FAMILY/SUITE
 #   FAMILY/SUITE  debian/bookworm|ubuntu/jammy|centos/s9|…
 #
-# Sources are git-cloned into common/deps/ (override with *_SRC or *_GIT):
+# Sources are git-cloned into vendor/ (override with *_SRC or *_GIT):
 #   getbar, repoman, bas-c, includes (for bas-c `ninja test`), and optionally
 #   subprojects/ (bas-c Meson subprojects; bas-c ships subprojects → ../subprojects).
 #
 # Environment (optional):
-#   BUILD4          path to build4 (default: build4)
-#   DEPS_DIR        clone directory (default: common/deps)
-#   TARGET          override build4 docker image (default derived from FAMILY/SUITE)
+#   BUILD4              path to build4 (default: build4)
+#   externdir           clone directory (default: vendor)
+#   TARGET              override build4 docker image (default derived from FAMILY/SUITE)
 #   GETBAR_GIT / REPOMAN_GIT / BAS_C_GIT / INCLUDES_GIT
 #   GETBAR_SRC / REPOMAN_SRC / BAS_C_SRC / INCLUDES_SRC
-#   BAS_SUBPROJECTS bas-c subprojects tree (default: $DEPS_DIR/subprojects, else udisk)
-#   DEPS_UPDATE     if 1, git fetch/reset deps to origin (default: 0 — deps are read-only)
-#   KEEP_BUILD4     if 1, pass -k to build4
+#   BAS_SUBPROJECTS     bas-c subprojects tree (default: $externdir/subprojects, else udisk)
+#   VENDOR_UPDATE       if 1, git fetch/reset vendor to origin (default: 0 — vendor are read-only)
+#   KEEP_BUILD4         if 1, pass -k to build4
 
 set -euo pipefail
 
 SPEC="${1:?usage: build-lrm-tools.sh FAMILY/SUITE}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMMON="$ROOT/common"
+scriptsdir="$ROOT/scripts"
+externdir="$ROOT/extern"
 
 case "$SPEC" in
 */*)
@@ -37,24 +38,23 @@ case "$SPEC" in
 esac
 
 SUITE_DIR="$ROOT/$FAMILY/$SUITE"
-VENDOR="$SUITE_DIR/vendor"
+VENDOR_ROOT="$SUITE_DIR/vendor"
 BUILD4="${BUILD4:-build4}"
-DEPS_DIR="${DEPS_DIR:-$COMMON/deps}"
 GETBAR_GIT="${GETBAR_GIT:-https://github.com/lenik/getbar.git}"
 REPOMAN_GIT="${REPOMAN_GIT:-https://github.com/lenik/repoman.git}"
 BAS_C_GIT="${BAS_C_GIT:-https://github.com/lenik/bas-c.git}"
 INCLUDES_GIT="${INCLUDES_GIT:-https://github.com/lenik/includes.git}"
 # bas-c ships subprojects → ../subprojects/; build4-inside copies from
-# BAS_SUBPROJECTS into a writable tree (never mutate deps/).
+# BAS_SUBPROJECTS into a writable tree (never mutate vendor/).
 if [[ -z "${BAS_SUBPROJECTS:-}" ]]; then
-  if [[ -d "$DEPS_DIR/subprojects" ]]; then
-    BAS_SUBPROJECTS="$DEPS_DIR/subprojects"
+  if [[ -d "$externdir/subprojects" ]]; then
+    BAS_SUBPROJECTS="$externdir/subprojects"
   else
     BAS_SUBPROJECTS="/home/lenik/tasks/udisk/subprojects"
   fi
 fi
-WORK="$COMMON/.build4-work/${FAMILY}-${SUITE}"
-DEPS_UPDATE="${DEPS_UPDATE:-0}"
+WORK="$scriptsdir/.build4-work/${FAMILY}-${SUITE}"
+VENDOR_UPDATE="${VENDOR_UPDATE:-0}"
 
 log() { printf 'build-lrm-tools: %s\n' "$*" >&2; }
 die() { printf 'build-lrm-tools: error: %s\n' "$*" >&2; exit 1; }
@@ -100,9 +100,9 @@ default_target() {
 
 TARGET="${TARGET:-$(default_target)}"
 
-# Resolve source tree: use explicit SRC if set, otherwise clone into DEPS_DIR/<name>.
+# Resolve source tree: use explicit SRC if set, otherwise clone into externdir/<name>.
 # Existing clones are treated as read-only (no fetch/checkout) so parallel
-# `eachdir make` shares deps/ safely. Set DEPS_UPDATE=1 to refresh from origin.
+# `eachdir make` shares vendor/ safely. Set VENDOR_UPDATE=1 to refresh from origin.
 ensure_git_src() {
     local name="$1" url="$2" dest="${3:-}"
 
@@ -113,16 +113,16 @@ ensure_git_src() {
         return 0
     fi
 
-    local dir="$DEPS_DIR/$name"
-    mkdir -p "$DEPS_DIR"
+    local dir="$externdir/$name"
+    mkdir -p "$externdir"
 
     if [[ -d "$dir/.git" ]]; then
-        if [[ "$DEPS_UPDATE" == 1 ]]; then
-            log "updating $name in $dir (DEPS_UPDATE=1)"
-            # Single-flight refresh: safe if several suites pass DEPS_UPDATE together.
+        if [[ "$VENDOR_UPDATE" == 1 ]]; then
+            log "updating $name in $dir (VENDOR_UPDATE=1)"
+            # Single-flight refresh: safe if several suites pass VENDOR_UPDATE together.
             (
               flock 9
-              git -C "$dir" fetch --depth 1 origin
+              git -C "$dir" fetch origin
               git -C "$dir" reset --hard HEAD
               git -C "$dir" clean -fd
               local ref
@@ -136,9 +136,9 @@ ensure_git_src() {
               else
                   git -C "$dir" pull --ff-only || true
               fi
-            ) 9>"$DEPS_DIR/.${name}.lock"
+            ) 9>"$externdir/.${name}.lock"
         else
-            log "reusing $name at $dir (read-only; DEPS_UPDATE=1 to refresh)"
+            log "reusing $name at $dir (read-only; VENDOR_UPDATE=1 to refresh)"
         fi
     else
         log "cloning $url → $dir"
@@ -148,7 +148,7 @@ ensure_git_src() {
               rm -rf "$dir"
               git clone --depth 1 "$url" "$dir"
           fi
-        ) 9>"$DEPS_DIR/.${name}.lock"
+        ) 9>"$externdir/.${name}.lock"
     fi
     [[ -f "$dir/meson.build" ]] || die "$name missing meson.build after clone: $dir"
     printf '%s\n' "$dir"
@@ -162,7 +162,7 @@ GETBAR_SRC="$(ensure_git_src getbar "$GETBAR_GIT" "${GETBAR_SRC:-}")"
 REPOMAN_SRC="$(ensure_git_src repoman "$REPOMAN_GIT" "${REPOMAN_SRC:-}")"
 BAS_C_SRC="$(ensure_git_src bas-c "$BAS_C_GIT" "${BAS_C_SRC:-}")"
 # Host-side bas-c `meson setup` / `ninja test` needs the includes CLI on PATH
-# (apt package or a local build of this tree). Kept in deps for convenience.
+# (apt package or a local build of this tree). Kept in vendor for convenience.
 INCLUDES_SRC="$(ensure_git_src includes "$INCLUDES_GIT" "${INCLUDES_SRC:-}")"
 
 log "sources: getbar=$GETBAR_SRC repoman=$REPOMAN_SRC bas-c=$BAS_C_SRC includes=$INCLUDES_SRC"
@@ -177,15 +177,15 @@ if [[ -e "$WORK" ]]; then
     rm -rf "$WORK" 2>/dev/null || true
   fi
 fi
-mkdir -p "$WORK/out" "$WORK/wraps" "$VENDOR"
-cp -a "$COMMON/build4-wraps/bash-builtins" "$WORK/wraps/"
-cp -a "$COMMON/build4-inside.sh" "$WORK/inside.sh"
+mkdir -p "$WORK/out" "$WORK/wraps" "$VENDOR_ROOT"
+cp -a "$scriptsdir/build4-wraps/bash-builtins" "$WORK/wraps/"
+cp -a "$scriptsdir/build4-inside.sh" "$WORK/inside.sh"
 chmod +x "$WORK/inside.sh"
 
 # Host-provided ninja (≥1.8, old glibc) for suites where apt/yum ninja is too
 # old or GitHub curl TLS fails (e.g. Ubuntu xenial). Prefer a portable binary
 # under build4-bins/; do NOT copy the host distro ninja (often needs new glibc).
-HOST_NINJA="$COMMON/build4-bins/ninja"
+HOST_NINJA="$scriptsdir/build4-bins/ninja"
 if [[ -x "$HOST_NINJA" ]]; then
   # Sanity: refuse a binary that will not run on glibc 2.17/2.23 targets.
   if ! "$HOST_NINJA" --version >/dev/null 2>&1; then
@@ -210,7 +210,7 @@ fi
 
 case "$FAMILY" in
 debian|ubuntu)
-  cp -a "$COMMON/build4-prescript.sh" "$WORK/prescript.sh"
+  cp -a "$scriptsdir/build4-prescript.sh" "$WORK/prescript.sh"
   chmod +x "$WORK/prescript.sh"
   bootstrap_list="$SUITE_DIR/etc/apt/bootstrap/sources.list"
   apt_conf_dir="$SUITE_DIR/etc/apt/apt.conf.d"
@@ -221,7 +221,7 @@ debian|ubuntu)
   fi
   ;;
 centos|rocky)
-  cp -a "$COMMON/build4-prescript-rpm.sh" "$WORK/prescript.sh"
+  cp -a "$scriptsdir/build4-prescript-rpm.sh" "$WORK/prescript.sh"
   chmod +x "$WORK/prescript.sh"
   # When TARGET image differs from SUITE (e.g. centos/5 tools on centos:7),
   # mount the *target* suite bootstrap repos so yum gets matching packages.
@@ -246,7 +246,7 @@ centos|rocky)
   vols+=(-v "$WORK/yum.repos.d:/etc/yum.repos.d:ro")
   ;;
 sles)
-  cp -a "$COMMON/build4-prescript-zypper.sh" "$WORK/prescript.sh"
+  cp -a "$scriptsdir/build4-prescript-zypper.sh" "$WORK/prescript.sh"
   chmod +x "$WORK/prescript.sh"
   bootstrap_repo="$SUITE_DIR/etc/zypp/bootstrap/lrm-bootstrap.repo"
   [[ -f "$bootstrap_repo" ]] || die "missing $bootstrap_repo (bootstrap zypp repos for build4)"
@@ -276,30 +276,30 @@ log "building getbar/lrm for $TARGET ($FAMILY/$SUITE) via build4"
 [[ -x "$WORK/out/bin/getbar" ]] || die "getbar missing after build4"
 [[ -x "$WORK/out/bin/lrm" ]] || die "lrm missing after build4"
 
-rm -rf "$VENDOR"
-mkdir -p "$VENDOR/bin" "$VENDOR/lib" "$VENDOR/share"
-cp -a "$WORK/out/." "$VENDOR/"
+rm -rf "$VENDOR_ROOT"
+mkdir -p "$VENDOR_ROOT/bin" "$VENDOR_ROOT/lib" "$VENDOR_ROOT/share"
+cp -a "$WORK/out/." "$VENDOR_ROOT/"
 # Helpers used inside the image during docker build / runtime.
-install -m 0755 "$COMMON/install-lrm-tools.sh" "$VENDOR/bin/install-lrm-tools.sh"
+install -m 0755 "$scriptsdir/install-lrm-tools.sh" "$VENDOR_ROOT/bin/install-lrm-tools.sh"
 case "$FAMILY" in
 debian|ubuntu)
-  install -m 0755 "$COMMON/apt-via-lrm.sh" "$VENDOR/bin/apt-via-lrm.sh"
-  install -m 0755 "$COMMON/apt-bootstrap-ca.sh" "$VENDOR/bin/apt-bootstrap-ca.sh"
+  install -m 0755 "$scriptsdir/apt-via-lrm.sh" "$VENDOR_ROOT/bin/apt-via-lrm.sh"
+  install -m 0755 "$scriptsdir/apt-bootstrap-ca.sh" "$VENDOR_ROOT/bin/apt-bootstrap-ca.sh"
   ;;
 centos|rocky)
-  install -m 0755 "$COMMON/yum-via-lrm.sh" "$VENDOR/bin/yum-via-lrm.sh"
+  install -m 0755 "$scriptsdir/yum-via-lrm.sh" "$VENDOR_ROOT/bin/yum-via-lrm.sh"
   ;;
 sles)
-  install -m 0755 "$COMMON/zypper-via-lrm.sh" "$VENDOR/bin/zypper-via-lrm.sh"
+  install -m 0755 "$scriptsdir/zypper-via-lrm.sh" "$VENDOR_ROOT/bin/zypper-via-lrm.sh"
   ;;
 esac
 
-if [[ ! -f "$VENDOR/share/repoman/common.sh" ]]; then
-  found="$(find "$VENDOR" -name common.sh -path '*/repoman/*' | head -1 || true)"
+if [[ ! -f "$VENDOR_ROOT/share/repoman/common.sh" ]]; then
+  found="$(find "$VENDOR_ROOT" -name common.sh -path '*/repoman/*' | head -1 || true)"
   [[ -n "$found" ]] || die "repoman common.sh not in vendor tree"
-  mkdir -p "$VENDOR/share/repoman"
-  cp -a "$(dirname "$found")/." "$VENDOR/share/repoman/"
+  mkdir -p "$VENDOR_ROOT/share/repoman"
+  cp -a "$(dirname "$found")/." "$VENDOR_ROOT/share/repoman/"
 fi
 
-log "vendor ready: $VENDOR"
-find "$VENDOR" -type f | sed 's|^|  |' | head -40 || true
+log "vendor ready: $VENDOR_ROOT"
+find "$VENDOR_ROOT" -type f | sed 's|^|  |' | head -40 || true

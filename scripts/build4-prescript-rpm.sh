@@ -107,7 +107,7 @@ ensure_pip() {
 
 ensure_meson_ninja() {
   export PATH="/usr/local/bin:${PATH}"
-  # Host-mounted ninja from build-lrm-tools (common/build4-bins/ninja).
+  # Host-mounted ninja from build-lrm-tools (scripts/build4-bins/ninja).
   if [[ -x /usr/local/bin/ninja ]] && /usr/local/bin/ninja --version >/dev/null 2>&1; then
     log "using mounted ninja: $(/usr/local/bin/ninja --version | head -1)"
   fi

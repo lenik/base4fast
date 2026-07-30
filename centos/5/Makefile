@@ -5,7 +5,7 @@ BUILD4 ?= $(shell which build4 || (echo "Error: build4 not found" >&2; exit 1))
 # CentOS 5 has no usable Python3/Meson; getbar/lrm from EL7+ need newer glibc.
 # Stub vendor + fixed HTTP vault mirrors (see Dockerfile).
 tools:
-	../../common/build-lrm-tools-stub.sh centos/5
+	../../scripts/build-lrm-tools-stub.sh centos/5
 
 bake: tools
 	docker buildx bake

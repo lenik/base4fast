@@ -1,3 +1,4 @@
 .build4-work/
 deps/
+extern/
 vendor/

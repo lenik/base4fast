@@ -3,14 +3,14 @@
 Host workflow (per suite, see `<family>/<suite>/Makefile`):
 
 1. `make tools` → `common/build-lrm-tools.sh FAMILY/SUITE`
-   - uses `common/deps/` clones read-only (clone once; set `DEPS_UPDATE=1` to refresh from GitHub)
+   - uses `vendor/` clones read-only (clone once; set `VENDOR_UPDATE=1` to refresh from GitHub)
    - deps: `getbar`, `repoman`, `bas-c`, `includes` (for bas-c unit-test discovery), optional `subprojects/`
    - build4 compiles getbar/lrm against the suite target image
    - writes `<family>/<suite>/vendor/`
 2. `make bake` / `make build` → Docker image (`COPY vendor/`, then `lrm bwsel` inside)
 
-Host bas-c tests (`ninja -C common/deps/bas-c/build test`) need the `includes`
-CLI on `PATH` (system package, or build/install `common/deps/includes`).
+Host bas-c tests (`ninja -C vendor/bas-c/build test`) need the `includes`
+CLI on `PATH` (system package, or build/install `vendor/includes`).
 
 ## Debian / Ubuntu image workflow
 

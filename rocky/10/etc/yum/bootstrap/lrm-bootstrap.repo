@@ -1,0 +1,19 @@
+[lrm-bootstrap-baseos]
+name=lrm bootstrap Rocky 10 BaseOS
+baseurl=https://mirrors.aliyun.com/rockylinux/10/BaseOS/$basearch/os/
+        https://mirrors.tuna.tsinghua.edu.cn/rocky/10/BaseOS/$basearch/os/
+        https://mirrors.ustc.edu.cn/rocky/10/BaseOS/$basearch/os/
+        https://mirrors.huaweicloud.com/rockylinux/10/BaseOS/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-appstream]
+name=lrm bootstrap Rocky 10 AppStream
+baseurl=https://mirrors.aliyun.com/rockylinux/10/AppStream/$basearch/os/
+        https://mirrors.tuna.tsinghua.edu.cn/rocky/10/AppStream/$basearch/os/
+        https://mirrors.ustc.edu.cn/rocky/10/AppStream/$basearch/os/
+        https://mirrors.huaweicloud.com/rockylinux/10/AppStream/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

@@ -1,0 +1,17 @@
+[lrm-bootstrap-baseos]
+name=lrm bootstrap Rocky 8 BaseOS
+baseurl=https://mirrors.aliyun.com/rockylinux/8.10/BaseOS/$basearch/os/
+        https://mirrors.tuna.tsinghua.edu.cn/rocky/8.10/BaseOS/$basearch/os/
+        https://mirrors.ustc.edu.cn/rocky/8.10/BaseOS/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-appstream]
+name=lrm bootstrap Rocky 8 AppStream
+baseurl=https://mirrors.aliyun.com/rockylinux/8.10/AppStream/$basearch/os/
+        https://mirrors.tuna.tsinghua.edu.cn/rocky/8.10/AppStream/$basearch/os/
+        https://mirrors.ustc.edu.cn/rocky/8.10/AppStream/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

@@ -3,7 +3,7 @@
 # Must run before any apt-get install in China; never use vendor default repos.
 #
 # Usage: apt-via-lrm.sh DISTRO_SPEC [bwsel options...]
-#   DISTRO_SPEC  e.g. debian, debian:bookworm, debian:trixie
+#   DISTRO_SPEC  e.g. debian:bookworm, ubuntu:jammy, ubuntu:noble
 #   extra args   forwarded to `lrm bwsel` (e.g. --no-security --no-backports)
 
 set -euo pipefail
@@ -51,6 +51,15 @@ refresh_apt_metadata() {
     if [[ -f "$sources" ]] && grep -q 'debian-archive' "$sources"; then
         log "using HTTP for debian-archive mirror (EOL suite)"
         sed -i 's|^URIs: https://|URIs: http://|g' "$sources"
+    fi
+
+    # Xenial (and similar): HTTPS needs apt-transport-https; minimal bootstrap
+    # only has ca-certificates. Fall back to HTTP rather than failing update.
+    if [[ -f "$sources" ]] && grep -q '^URIs: https://' "$sources"; then
+        if [[ ! -x /usr/lib/apt/methods/https ]]; then
+            log "apt https method missing — using HTTP mirrors"
+            sed -i 's|^URIs: https://|URIs: http://|g' "$sources"
+        fi
     fi
 
     # Bound network stalls so image builds fail fast instead of hanging.

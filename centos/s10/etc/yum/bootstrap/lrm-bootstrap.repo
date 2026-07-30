@@ -1,0 +1,19 @@
+[lrm-bootstrap-baseos]
+name=lrm bootstrap CentOS Stream 10 BaseOS
+baseurl=https://mirrors.huaweicloud.com/centos-stream/10-stream/BaseOS/$basearch/os/
+        https://mirrors.ustc.edu.cn/centos-stream/10-stream/BaseOS/$basearch/os/
+        http://mirrors.tuna.tsinghua.edu.cn/centos-stream/10-stream/BaseOS/$basearch/os/
+        https://mirrors.aliyun.com/centos-stream/10-stream/BaseOS/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-appstream]
+name=lrm bootstrap CentOS Stream 10 AppStream
+baseurl=https://mirrors.huaweicloud.com/centos-stream/10-stream/AppStream/$basearch/os/
+        https://mirrors.ustc.edu.cn/centos-stream/10-stream/AppStream/$basearch/os/
+        http://mirrors.tuna.tsinghua.edu.cn/centos-stream/10-stream/AppStream/$basearch/os/
+        https://mirrors.aliyun.com/centos-stream/10-stream/AppStream/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

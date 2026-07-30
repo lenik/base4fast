@@ -1,0 +1,20 @@
+[lrm-bootstrap]
+name=lrm bootstrap CentOS 6
+# Prefer HTTP — CentOS 6 OpenSSL is often too old for current HTTPS mirrors.
+baseurl=http://mirrors.aliyun.com/centos-vault/6.10/os/$basearch/
+        http://mirrors.tuna.tsinghua.edu.cn/centos-vault/6.10/os/$basearch/
+        http://mirrors.ustc.edu.cn/centos-vault/6.10/os/$basearch/
+        http://mirrors.huaweicloud.com/centos-vault/6.10/os/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-updates]
+name=lrm bootstrap CentOS 6 Updates
+baseurl=http://mirrors.aliyun.com/centos-vault/6.10/updates/$basearch/
+        http://mirrors.tuna.tsinghua.edu.cn/centos-vault/6.10/updates/$basearch/
+        http://mirrors.ustc.edu.cn/centos-vault/6.10/updates/$basearch/
+        http://mirrors.huaweicloud.com/centos-vault/6.10/updates/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

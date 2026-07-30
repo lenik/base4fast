@@ -1,0 +1,19 @@
+[lrm-bootstrap]
+name=lrm bootstrap CentOS 7
+baseurl=https://mirrors.tuna.tsinghua.edu.cn/centos-vault/7.9.2009/os/$basearch/
+        https://mirrors.huaweicloud.com/centos-vault/7.9.2009/os/$basearch/
+        https://mirrors.ustc.edu.cn/centos-vault/7.9.2009/os/$basearch/
+        https://mirrors.aliyun.com/centos-vault/7.9.2009/os/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-updates]
+name=lrm bootstrap CentOS 7 Updates
+baseurl=https://mirrors.tuna.tsinghua.edu.cn/centos-vault/7.9.2009/updates/$basearch/
+        https://mirrors.huaweicloud.com/centos-vault/7.9.2009/updates/$basearch/
+        https://mirrors.ustc.edu.cn/centos-vault/7.9.2009/updates/$basearch/
+        https://mirrors.aliyun.com/centos-vault/7.9.2009/updates/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

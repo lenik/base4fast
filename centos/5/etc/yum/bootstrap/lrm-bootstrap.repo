@@ -1,0 +1,20 @@
+[lrm-bootstrap]
+name=lrm bootstrap CentOS 5
+# CentOS 5 yum/M2Crypto cannot speak modern TLS — use HTTP vault mirrors only.
+baseurl=http://mirrors.aliyun.com/centos-vault/5.11/os/$basearch/
+        http://mirrors.tuna.tsinghua.edu.cn/centos-vault/5.11/os/$basearch/
+        http://mirrors.ustc.edu.cn/centos-vault/5.11/os/$basearch/
+        http://mirrors.huaweicloud.com/centos-vault/5.11/os/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-updates]
+name=lrm bootstrap CentOS 5 Updates
+baseurl=http://mirrors.aliyun.com/centos-vault/5.11/updates/$basearch/
+        http://mirrors.tuna.tsinghua.edu.cn/centos-vault/5.11/updates/$basearch/
+        http://mirrors.ustc.edu.cn/centos-vault/5.11/updates/$basearch/
+        http://mirrors.huaweicloud.com/centos-vault/5.11/updates/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

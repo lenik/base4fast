@@ -1,0 +1,23 @@
+[lrm-bootstrap-oss]
+name=lrm bootstrap openSUSE OSS (15.1)
+enabled=1
+autorefresh=0
+baseurl=https://mirrors.aliyun.com/opensuse/distribution/leap/15.1/repo/oss/
+        https://mirrors.tuna.tsinghua.edu.cn/opensuse/distribution/leap/15.1/repo/oss/
+        https://mirrors.ustc.edu.cn/opensuse/distribution/leap/15.1/repo/oss/
+        https://mirrors.huaweicloud.com/opensuse/distribution/leap/15.1/repo/oss/
+type=rpm-md
+gpgcheck=0
+keeppackages=1
+
+[lrm-bootstrap-update]
+name=lrm bootstrap openSUSE Update (15.1)
+enabled=1
+autorefresh=0
+baseurl=https://mirrors.aliyun.com/opensuse/update/leap/15.1/oss/
+        https://mirrors.tuna.tsinghua.edu.cn/opensuse/update/leap/15.1/oss/
+        https://mirrors.ustc.edu.cn/opensuse/update/leap/15.1/oss/
+        https://mirrors.huaweicloud.com/opensuse/update/leap/15.1/oss/
+type=rpm-md
+gpgcheck=0
+keeppackages=1

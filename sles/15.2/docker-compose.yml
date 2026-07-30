@@ -5,4 +5,4 @@ services:
       dockerfile: Dockerfile
       additional_contexts:
         host_opt: /opt
-    image: base4fast:sles-15.1
+    image: base4fast:sles-15.2

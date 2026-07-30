@@ -9,9 +9,10 @@ group "default" {
 target "base-image" {
   contexts = {
     host_opt = "/opt"
+    leap42_repo = "../../scripts/build4-bins/leap42.1-repo"
   }
   tags = [
-    "base4fast:sles-12",
-    "base4fast:sles-12-${VERSION}"
+    "base4fast:sles-12.1",
+    "base4fast:sles-12.1-${VERSION}"
   ]
 }

@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 ARG VERSION=1.0
-ARG DISTRO_SPEC=sles:12
+ARG DISTRO_SPEC=sles:16.2
 ARG LRM_BWSEL_OPTS=""
 
-# SLES 12 SP5 base; packages from openSUSE Leap 42.3 mirrors (China-friendly, no SCC).
-FROM registry.suse.com/suse/sles12sp5:latest
+# Official SLE BCI. Tag 16.2 is not published yet; use 16.1.
+FROM registry.suse.com/bci/bci-base:16.1
 
 ARG VERSION
 ARG DISTRO_SPEC
@@ -17,21 +17,11 @@ LABEL version=${VERSION}
 ENV PATH="/usr/local/bin:${PATH}"
 ENV LRM_GETBAR=getbar
 
-# ---------------------------------------------------------------------------
-# 1. Bootstrap zypper — China openSUSE mirrors (no SCC required).
-# ---------------------------------------------------------------------------
-RUN --mount=type=cache,id=sles-12-zypp,target=/var/cache/zypp,sharing=locked \
-    --mount=type=bind,source=etc,target=/tmp/src_etc \
-    mkdir -p /etc/zypp/repos.d/bak \
-    && (shopt -s nullglob; for f in /etc/zypp/repos.d/*.repo; do mv -f "$f" /etc/zypp/repos.d/bak/; done) \
-    && cp /tmp/src_etc/zypp/bootstrap/lrm-bootstrap.repo /etc/zypp/repos.d/ \
-    && zypper --non-interactive --gpg-auto-import-keys refresh \
-    && zypper --non-interactive install --no-recommends bash ca-certificates \
-    && rm -f /etc/zypp/repos.d/lrm-bootstrap.repo
+# Keep stock SLE_BCI (public-dl.suse.com) — official packages.
+RUN --mount=type=cache,id=sles-16.2-zypp,target=/var/cache/zypp,sharing=locked \
+    zypper --non-interactive --gpg-auto-import-keys refresh \
+    && zypper --non-interactive install --no-recommends bash ca-certificates
 
-# ---------------------------------------------------------------------------
-# 2. Suite-specific getbar/lrm (built on host with build4 → vendor/)
-# ---------------------------------------------------------------------------
 COPY vendor/ /usr/local/
 RUN echo /usr/local/lib > /etc/ld.so.conf.d/local.conf \
     && ldconfig \
@@ -40,24 +30,16 @@ RUN echo /usr/local/lib > /etc/ld.so.conf.d/local.conf \
     && (test -x /usr/local/bin/drm && chmod +x /usr/local/bin/drm || true) \
     && lrm --version
 
-# ---------------------------------------------------------------------------
-# 3. Select fastest mirror with lrm bwsel (inside the image)
-# ---------------------------------------------------------------------------
-RUN zypper-via-lrm.sh "${DISTRO_SPEC}" ${LRM_BWSEL_OPTS}
-
-# ---------------------------------------------------------------------------
-# 4. Refresh from selected mirror, install runtime deps + essentials.
-# ---------------------------------------------------------------------------
-RUN --mount=type=cache,id=sles-12-zypp-v2,target=/var/cache/zypp,sharing=locked \
+RUN --mount=type=cache,id=sles-16.2-zypp-v2,target=/var/cache/zypp,sharing=locked \
     --mount=type=bind,source=etc,target=/tmp/src_etc \
     zypper --non-interactive --gpg-auto-import-keys refresh \
     && zypper --non-interactive update \
     && zypper --non-interactive install --no-recommends \
         libcurl4 libglib-2_0-0 libicu zlib \
         bash-completion curl findutils git gzip iproute2 less \
-        man nano procps rsync tar which \
+        man procps rsync tar which \
         || zypper --non-interactive install --no-recommends \
-        curl findutils git less nano procps rsync tar which \
+        curl findutils git less procps rsync tar which \
     && getbar --version \
     && mkdir -p /etc/bashrc.d \
     && cp /tmp/src_etc/bash.bashrc /etc/bashrc.base4fast \
@@ -73,7 +55,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && (localedef -i en_US -f UTF-8 en_US.UTF-8 || true)
 
-COPY --from=host_opt ./java/jdk-11 /opt/java/jdk-11
+COPY --from=host_opt ./java/jdk-21.0.7 /opt/java/jdk-21.0.7
 
 RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
     if ! id -u lenik >/dev/null 2>&1; then \
@@ -87,5 +69,3 @@ RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
 RUN mkdir -p /home/lenik/.ssh && chmod 700 /home/lenik/.ssh
 COPY --chown=lenik:dev authorized_keys /home/lenik/.ssh/authorized_keys
 RUN chmod 600 /home/lenik/.ssh/authorized_keys
-
-ENTRYPOINT ["/bin/bash", "-i"]

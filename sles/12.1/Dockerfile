@@ -1,17 +1,17 @@
 # syntax=docker/dockerfile:1
 ARG VERSION=1.0
-ARG DISTRO_SPEC=sles:16.1
+ARG DISTRO_SPEC=sles:12.1
 ARG LRM_BWSEL_OPTS=""
 
-# SLES 16.1 BCI; bootstrap OSS from openSUSE Leap 16 mirrors when available.
-FROM registry.suse.com/bci/bci-base:16.1
+# SLES 12 SP1 twin: openSUSE Leap 42.1 (glibc 2.22) via opensuse/archive:42.1
+FROM opensuse/archive:42.1
 
 ARG VERSION
 ARG DISTRO_SPEC
 ARG LRM_BWSEL_OPTS=""
 
 LABEL maintainer="Lenik <lenik@bodz.net>"
-LABEL description="SLES-family & uni tools"
+LABEL description="SLES-family & uni tools (openSUSE Leap twin)"
 LABEL version=${VERSION}
 
 ENV PATH="/usr/local/bin:${PATH}"
@@ -20,14 +20,24 @@ ENV LRM_GETBAR=getbar
 # ---------------------------------------------------------------------------
 # 1. Bootstrap zypper — China openSUSE mirrors (no SCC required).
 # ---------------------------------------------------------------------------
-RUN --mount=type=cache,id=sles-16.1-zypp,target=/var/cache/zypp,sharing=locked \
+RUN --mount=type=cache,id=sles-12.1-zypp,target=/var/cache/zypp,sharing=locked \
     --mount=type=bind,source=etc,target=/tmp/src_etc \
+    --mount=type=bind,from=leap42_repo,source=/,target=/src/leap42.1-repo,ro \
     mkdir -p /etc/zypp/repos.d/bak \
     && (shopt -s nullglob; for f in /etc/zypp/repos.d/*.repo; do mv -f "$f" /etc/zypp/repos.d/bak/; done) \
-    && cp /tmp/src_etc/zypp/bootstrap/lrm-bootstrap.repo /etc/zypp/repos.d/ \
+    && printf '%s\n' \
+        '[lrm-local-oss]' \
+        'name=lrm local Leap 42.1 OSS (prefetched via axel -n 16)' \
+        'enabled=1' \
+        'autorefresh=0' \
+        'baseurl=file:///src/leap42.1-repo/x86_64' \
+        'type=rpm-md' \
+        'gpgcheck=0' \
+        'priority=1' \
+        > /etc/zypp/repos.d/lrm-local.repo \
     && zypper --non-interactive --gpg-auto-import-keys refresh \
     && zypper --non-interactive install --no-recommends bash ca-certificates \
-    && rm -f /etc/zypp/repos.d/lrm-bootstrap.repo
+    && rm -f /etc/zypp/repos.d/lrm-local.repo
 
 # ---------------------------------------------------------------------------
 # 2. Suite-specific getbar/lrm (built on host with build4 → vendor/)
@@ -41,23 +51,37 @@ RUN echo /usr/local/lib > /etc/ld.so.conf.d/local.conf \
     && lrm --version
 
 # ---------------------------------------------------------------------------
-# 3. Select fastest mirror with lrm bwsel (inside the image)
+# 3. Leap 42.1 is discontinued — skip lrm bwsel (maps to wrong 42.3 + HTTPS/SSL pain).
+#    Keep getbar/lrm in the image for runtime; use prefetched local OSS + ftp5 HTTP.
 # ---------------------------------------------------------------------------
-RUN zypper-via-lrm.sh "${DISTRO_SPEC}" ${LRM_BWSEL_OPTS}
+RUN mkdir -p /etc/zypp/repos.d \
+    && printf "%s\n" "Leap 42.1: skip bwsel; packages come from axel-prefetched local OSS repo"
 
 # ---------------------------------------------------------------------------
 # 4. Refresh from selected mirror, install runtime deps + essentials.
 # ---------------------------------------------------------------------------
-RUN --mount=type=cache,id=sles-16.1-zypp-v2,target=/var/cache/zypp,sharing=locked \
+RUN --mount=type=cache,id=sles-12.1-zypp-v2,target=/var/cache/zypp,sharing=locked \
     --mount=type=bind,source=etc,target=/tmp/src_etc \
-    zypper --non-interactive --gpg-auto-import-keys refresh \
-    && zypper --non-interactive update \
+    --mount=type=bind,from=leap42_repo,source=/,target=/src/leap42.1-repo,ro \
+    printf '%s\n' \
+        '[lrm-local-oss]' \
+        'name=lrm local Leap 42.1 OSS (prefetched)' \
+        'enabled=1' \
+        'autorefresh=0' \
+        'baseurl=file:///src/leap42.1-repo/x86_64' \
+        'type=rpm-md' \
+        'gpgcheck=0' \
+        'priority=1' \
+        > /etc/zypp/repos.d/lrm-local.repo \
+    && zypper --non-interactive --gpg-auto-import-keys refresh \
     && zypper --non-interactive install --no-recommends \
         libcurl4 libglib-2_0-0 libicu zlib \
         bash-completion curl findutils git gzip iproute2 less \
         man nano procps rsync tar which \
         || zypper --non-interactive install --no-recommends \
         curl findutils git less nano procps rsync tar which \
+        || true \
+    && rm -f /etc/zypp/repos.d/lrm-local.repo \
     && getbar --version \
     && mkdir -p /etc/bashrc.d \
     && cp /tmp/src_etc/bash.bashrc /etc/bashrc.base4fast \
@@ -73,7 +97,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && (localedef -i en_US -f UTF-8 en_US.UTF-8 || true)
 
-COPY --from=host_opt ./java/jdk-21.0.7 /opt/java/jdk-21.0.7
+COPY --from=host_opt ./java/jdk-11 /opt/java/jdk-11
 
 RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
     if ! id -u lenik >/dev/null 2>&1; then \
@@ -87,5 +111,3 @@ RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
 RUN mkdir -p /home/lenik/.ssh && chmod 700 /home/lenik/.ssh
 COPY --chown=lenik:dev authorized_keys /home/lenik/.ssh/authorized_keys
 RUN chmod 600 /home/lenik/.ssh/authorized_keys
-
-ENTRYPOINT ["/bin/bash", "-i"]

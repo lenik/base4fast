@@ -1,0 +1,19 @@
+[lrm-bootstrap-oss]
+name=lrm bootstrap openSUSE Leap 42.1 OSS (discontinued)
+enabled=1
+autorefresh=0
+baseurl=http://ftp5.gwdg.de/pub/opensuse/discontinued/distribution/leap/42.1/repo/oss/suse/
+        https://ftp.gwdg.de/pub/opensuse/discontinued/distribution/leap/42.1/repo/oss/suse/
+type=rpm-md
+gpgcheck=0
+keeppackages=1
+
+[lrm-bootstrap-update]
+name=lrm bootstrap openSUSE Leap 42.1 Update (discontinued)
+enabled=0
+autorefresh=0
+baseurl=http://ftp5.gwdg.de/pub/opensuse/discontinued/update/leap/42.1/oss/
+        https://ftp.gwdg.de/pub/opensuse/discontinued/update/leap/42.1/oss/
+type=rpm-md
+gpgcheck=0
+keeppackages=1

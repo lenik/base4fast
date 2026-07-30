@@ -11,7 +11,7 @@ target "base-image" {
     host_opt = "/opt"
   }
   tags = [
-    "base4fast:sles-16.1",
-    "base4fast:sles-16.1-${VERSION}"
+    "base4fast:sles-15.2",
+    "base4fast:sles-15.2-${VERSION}"
   ]
 }

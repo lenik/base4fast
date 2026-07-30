@@ -1,17 +1,17 @@
 # syntax=docker/dockerfile:1
 ARG VERSION=1.0
-ARG DISTRO_SPEC=sles:15.1
+ARG DISTRO_SPEC=sles:15.2
 ARG LRM_BWSEL_OPTS=""
 
-# SLES 15 SP1 era via openSUSE Leap 15.1 (BCI 15.1 tag no longer published).
-FROM opensuse/leap:15.1
+# SLES 15 SP2 twin: openSUSE Leap 15.2 (glibc 2.26). Hub tag is opensuse/leap:15.2 (archive:15.2 not published).
+FROM opensuse/leap:15.2
 
 ARG VERSION
 ARG DISTRO_SPEC
 ARG LRM_BWSEL_OPTS=""
 
 LABEL maintainer="Lenik <lenik@bodz.net>"
-LABEL description="SLES-family & uni tools"
+LABEL description="SLES-family & uni tools (openSUSE Leap twin)"
 LABEL version=${VERSION}
 
 ENV PATH="/usr/local/bin:${PATH}"
@@ -20,7 +20,7 @@ ENV LRM_GETBAR=getbar
 # ---------------------------------------------------------------------------
 # 1. Bootstrap zypper — China openSUSE mirrors (no SCC required).
 # ---------------------------------------------------------------------------
-RUN --mount=type=cache,id=sles-15.1-zypp,target=/var/cache/zypp,sharing=locked \
+RUN --mount=type=cache,id=sles-15.2-zypp,target=/var/cache/zypp,sharing=locked \
     --mount=type=bind,source=etc,target=/tmp/src_etc \
     mkdir -p /etc/zypp/repos.d/bak \
     && (shopt -s nullglob; for f in /etc/zypp/repos.d/*.repo; do mv -f "$f" /etc/zypp/repos.d/bak/; done) \
@@ -48,7 +48,7 @@ RUN zypper-via-lrm.sh "${DISTRO_SPEC}" ${LRM_BWSEL_OPTS}
 # ---------------------------------------------------------------------------
 # 4. Refresh from selected mirror, install runtime deps + essentials.
 # ---------------------------------------------------------------------------
-RUN --mount=type=cache,id=sles-15.1-zypp-v2,target=/var/cache/zypp,sharing=locked \
+RUN --mount=type=cache,id=sles-15.2-zypp-v2,target=/var/cache/zypp,sharing=locked \
     --mount=type=bind,source=etc,target=/tmp/src_etc \
     zypper --non-interactive --gpg-auto-import-keys refresh \
     && zypper --non-interactive update \
@@ -87,5 +87,3 @@ RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
 RUN mkdir -p /home/lenik/.ssh && chmod 700 /home/lenik/.ssh
 COPY --chown=lenik:dev authorized_keys /home/lenik/.ssh/authorized_keys
 RUN chmod 600 /home/lenik/.ssh/authorized_keys
-
-ENTRYPOINT ["/bin/bash", "-i"]

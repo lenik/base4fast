@@ -1,0 +1,59 @@
+{
+  "distSpecVersion": "1.1.1",
+  "storage": {
+    "rootDirectory": "/var/lib/registry",
+    "gc": true,
+    "dedupe": true
+  },
+  "http": {
+    "address": "[::]",
+    "port": "8080",
+    "realm": "zot",
+    "compat": ["docker2s2"],
+    "tls": {
+      "cert": "/certs/domain.crt",
+      "key": "/certs/domain.pem"
+    },
+    "auth": {
+      "htpasswd": {
+        "path": "/etc/zot/htpasswd"
+      }
+    },
+    "accessControl": {
+      "repositories": {
+        "**": {
+          "policies": [
+            {
+              "users": ["zot"],
+              "actions": ["read", "create", "update"]
+            },
+            {
+              "users": ["guest"],
+              "actions": ["read"]
+            }
+          ],
+          "defaultPolicy": []
+        }
+      },
+      "adminPolicy": {
+        "users": ["lenik"],
+        "actions": ["read", "create", "update", "delete"]
+      }
+    }
+  },
+  "log": {
+    "level": "info"
+  },
+  "extensions": {
+    "ui": {
+      "enable": true
+    },
+    "search": {
+      "enable": true
+    },
+    "scrub": {
+      "enable": true,
+      "interval": "24h"
+    }
+  }
+}

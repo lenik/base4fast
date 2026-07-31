@@ -10,6 +10,8 @@
     "port": "8080",
     "realm": "zot",
     "compat": ["docker2s2"],
+    "readTimeout": "30m",
+    "writeTimeout": "30m",
     "tls": {
       "cert": "/certs/domain.crt",
       "key": "/certs/domain.pem"

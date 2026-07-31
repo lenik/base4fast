@@ -1,107 +1,213 @@
-include docker/container.mk
+# Local Zot OCI registry (HTTPS API + UI on one port).
+# Typical flow:  make gencerts genhtpasswd run
+#
+# Ports:
+#   CONTAINER_PORT (8080) — config.json → http.port
+#   SERVER_PORT    (1244) — published on the host
+#
+# Listen: config http.address "[::]" (all IPv4 + IPv6; Zot joins as [host]:port)
+#
+# Network modes (NETWORK_MODE=auto|host|bridge):
+#   bridge — -p SERVER_PORT:CONTAINER_PORT
+#   host   — --network host; runtime config listens on SERVER_PORT
+#   auto   — host if daemon can't publish ports, else bridge
 
-ID = zot
+SHELL = /bin/bash
+
+# ---------------------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------------------
+
+ID = registry
+IMAGE = $(ID)
+VERSION = latest
 GUEST_SHELL = /bin/ash -l
 
+# ---------------------------------------------------------------------------
+# Ports: container listen vs host publish
+# ---------------------------------------------------------------------------
+
 SERVER_HOST = localhost
-SERVER_PORT = 3244
-# Zot serves API + UI on the same port (HTTPS).
-WEB_PORT = $(SERVER_PORT)
+SERVER_PORT = 1244
+CONTAINER_PORT = 8080
+
+# ---------------------------------------------------------------------------
+# Default htpasswd users (bcrypt). Roles enforced in config.json accessControl.
+#   lenik — admin (read/create/update/delete on all repos)
+#   zot   — normal (read/create/update)
+#   guest — guest (read only)
+# ---------------------------------------------------------------------------
+
+HTPASSWD = htpasswd
+USER_LENIK = lenik
+PASS_LENIK = 2Bw1ijPadpTX
+USER_ZOT = zot
+PASS_ZOT = 2Bw1ijPadpTX
+USER_GUEST = guest
+PASS_GUEST = V6RiHvGv5a29
+
+# ---------------------------------------------------------------------------
+# Network mode: auto | host | bridge
+# ---------------------------------------------------------------------------
+
+NETWORK_MODE ?= auto
+
+_DETECT_NETWORK_MODE = $(shell \
+	if [ -r /etc/docker/daemon.json ] && \
+	   { grep -Eq '"bridge"[[:space:]]*:[[:space:]]*"none"' /etc/docker/daemon.json || \
+	     grep -Eq '"iptables"[[:space:]]*:[[:space:]]*false' /etc/docker/daemon.json; }; then \
+	  echo host; \
+	elif docker network inspect bridge >/dev/null 2>&1; then \
+	  echo bridge; \
+	else \
+	  echo host; \
+	fi)
+
+ifeq ($(NETWORK_MODE),auto)
+  NET_MODE := $(_DETECT_NETWORK_MODE)
+else
+  NET_MODE := $(NETWORK_MODE)
+endif
+
+ifeq ($(NET_MODE),host)
+  DOCKER_NET_OPTS = --network host
+  # Host net can't remap ports; use rewritten config that listens on SERVER_PORT.
+  ZOT_CONFIG_MOUNT = -v $$(readlink -f .run/config.json):/etc/zot/config.json:ro
+else ifeq ($(NET_MODE),bridge)
+  DOCKER_NET_OPTS = -p $(SERVER_PORT):$(CONTAINER_PORT)
+  ZOT_CONFIG_MOUNT = -v $$(readlink -f config.json):/etc/zot/config.json:ro
+else
+  $(error NETWORK_MODE must be auto, host, or bridge (got '$(NETWORK_MODE)' → '$(NET_MODE)'))
+endif
+
+# ---------------------------------------------------------------------------
+# Docker run defaults
+# ---------------------------------------------------------------------------
+
+DOCKER_RUN_DNS =
+#DOCKER_RUN_DNS = --dns 8.8.8.8
+
+DOCKER_RUN_VOLS = \
+    -v /home:/home \
+    -v /media:/media \
+    -v /mnt:/mnt \
+    -v /tmp:/tmp
+
+DOCKER_RUN_OPTS = \
+    --hostname $(ID) \
+    $(DOCKER_RUN_DNS) \
+    $(DOCKER_RUN_VOLS)
+
+# ---------------------------------------------------------------------------
+# Zot image & bind mounts (host paths resolved at recipe time)
+# ---------------------------------------------------------------------------
 
 ZOT_IMAGE = ghcr.io/project-zot/zot-linux-amd64:v2.1.18
 ZOT_DATA = $$(readlink -f data)
-ZOT_CONFIG = $$(readlink -f zot)/config.json
-LEGACY_PORT = 3245
+ZOT_CONFIG = $$(readlink -f config.json)
+ZOT_HTPASSWD = $$(readlink -f $(HTPASSWD))
+ZOT_CERTS = $$(readlink -f certs)
 
-# s1/kolla: daemon.json has bridge=none + iptables=false, so -p publishing
-# does not work. Use host network and listen on SERVER_PORT directly.
+# ---------------------------------------------------------------------------
+# TLS (self-signed; SAN from certs/domain.cfg → req_extensions)
+# ---------------------------------------------------------------------------
+
+CERT_DAYS ?= 18250
+CERT_DIR = certs
+CERT_CFG = $(CERT_DIR)/domain.cfg
+CERT_KEY = $(CERT_DIR)/domain.pem
+CERT_CRT = $(CERT_DIR)/domain.crt
+
+gencerts:
+	@if [ -f $(CERT_KEY) ] && [ -f $(CERT_CRT) ]; then \
+	  echo "already exists: $(CERT_KEY) $(CERT_CRT) (use gencerts-force to regenerate)"; \
+	else \
+	  $(MAKE) gencerts-force; \
+	fi
+
+gencerts-force:
+	openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days $(CERT_DAYS) \
+	    -config $(CERT_CFG) \
+	    -extensions req_extensions \
+	    -keyout $(CERT_KEY) \
+	    -out $(CERT_CRT)
+	@chmod 600 $(CERT_KEY)
+	@openssl x509 -in $(CERT_CRT) -noout -subject -dates -ext subjectAltName
+
+# ---------------------------------------------------------------------------
+# htpasswd (bcrypt only — required by Zot)
+# ---------------------------------------------------------------------------
+
+genhtpasswd:
+	@if [ -f $(HTPASSWD) ]; then \
+	  echo "already exists: $(HTPASSWD) (use genhtpasswd-force to regenerate)"; \
+	else \
+	  $(MAKE) genhtpasswd-force; \
+	fi
+
+genhtpasswd-force:
+	htpasswd -cbB $(HTPASSWD) $(USER_LENIK) '$(PASS_LENIK)'
+	htpasswd -bB $(HTPASSWD) $(USER_ZOT) '$(PASS_ZOT)'
+	htpasswd -bB $(HTPASSWD) $(USER_GUEST) '$(PASS_GUEST)'
+	# Normalize apache2-utils $$2y$$ → $$2a$$ for Go/Zot bcrypt
+	sed -i 's/\$$2y\$$/\$$2a\$$/g' $(HTPASSWD)
+	@chmod 640 $(HTPASSWD)
+	@echo "users: $(USER_LENIK) (admin), $(USER_ZOT) (user), $(USER_GUEST) (guest)"
+
+# ---------------------------------------------------------------------------
+# Lifecycle
+# ---------------------------------------------------------------------------
+
+run: -run-docker -tty-cleanup
 
 -run-docker: run-zot
 
-run-zot:
+run-zot: genhtpasswd
+	@echo "network mode: $(NET_MODE) (NETWORK_MODE=$(NETWORK_MODE))"
+	@echo "host $(SERVER_HOST):$(SERVER_PORT) → container :$(CONTAINER_PORT)"
+	@if [ "$(NET_MODE)" = host ]; then \
+	  mkdir -p .run; \
+	  sed -E 's/"port"[[:space:]]*:[[:space:]]*"$(CONTAINER_PORT)"/"port": "$(SERVER_PORT)"/' \
+	    config.json > .run/config.json; \
+	fi
 	docker run $(DOCKER_RUN_OPTS) \
 	    -d \
 	    --name $(ID) \
-	    --network host \
+	    $(DOCKER_NET_OPTS) \
 	    -v $(ZOT_DATA):/var/lib/registry \
-	    -v $$(readlink -f zot):/etc/zot:ro \
-	    -v $$(readlink -f certs):/certs:ro \
+	    $(ZOT_CONFIG_MOUNT) \
+	    -v $(ZOT_HTPASSWD):/etc/zot/htpasswd:ro \
+	    -v $(ZOT_CERTS):/certs:ro \
 	    $(ZOT_IMAGE) serve /etc/zot/config.json
 
-# One-shot: move distribution registry to LEGACY_PORT and sync into Zot.
-migrate-zot:
-	-docker rm -f $(ID)-web
-	-docker rm -f $(ID)-legacy
-	docker rm -f $(ID)
-	docker run $(DOCKER_RUN_OPTS) \
-	    -d \
-	    --name $(ID)-legacy \
-	    --network host \
-	    -v $$(readlink -f data):/var/lib/registry \
-	    -v $$(readlink -f certs):/certs \
-	    -e REGISTRY_HTTP_ADDR=0.0.0.0:$(LEGACY_PORT) \
-	    -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
-	    -e REGISTRY_HTTP_TLS_KEY=/certs/domain.pem \
-	    -e REGISTRY_HTTP_TLS_MINIMUMTLS=tls1.0 \
-	    -e 'REGISTRY_HTTP_TLS_CIPHERSUITES=["TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_RSA_WITH_AES_128_CBC_SHA","TLS_RSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"]' \
-	    registry:2
-	mkdir -p $$(readlink -f data-zot)
-	docker run $(DOCKER_RUN_OPTS) \
-	    -d \
-	    --name $(ID) \
-	    --network host \
-	    -v $(ZOT_DATA):/var/lib/registry \
-	    -v $$(readlink -f zot):/etc/zot:ro \
-	    -v $$(readlink -f certs):/certs:ro \
-	    $(ZOT_IMAGE) serve /etc/zot/config-migrate.json
-	@echo "Zot syncing from legacy registry on :$(LEGACY_PORT)."
-	@echo "Watch: make migrate-status"
-	@echo "When catalogs match: make migrate-finish"
+start: pre-start -start post-start
+-start:
+	docker start $(ID)
+pre-start:
+post-start:
 
-migrate-status:
-	@echo -n "legacy: "; curl -sk https://127.0.0.1:$(LEGACY_PORT)/v2/_catalog | python3 -c 'import sys,json; print(len(json.load(sys.stdin).get("repositories",[])))'
-	@echo -n "zot:    "; curl -sk https://127.0.0.1:$(SERVER_PORT)/v2/_catalog | python3 -c 'import sys,json; print(len(json.load(sys.stdin).get("repositories",[])))'
-	@docker logs --tail 30 $(ID) 2>&1 | grep -iE 'sync|error|fail' | tail -20 || true
+stop: pre-stop -stop post-stop
+-stop:
+	docker stop $(ID)
+pre-stop:
+post-stop:
 
-# Compare every repo's tags (run before migrate-finish).
-migrate-verify:
-	@python3 -c 'import json,urllib.request,ssl; ctx=ssl._create_unverified_context();\
-get=lambda u: json.load(urllib.request.urlopen(u, context=ctx));\
-leg=get("https://127.0.0.1:$(LEGACY_PORT)/v2/_catalog")["repositories"]; bad=[];\
-\
-[bad.append((r,sorted(set(get("https://127.0.0.1:$(LEGACY_PORT)/v2/%s/tags/list"%r).get("tags") or [])-set(get("https://127.0.0.1:$(SERVER_PORT)/v2/%s/tags/list"%r).get("tags") or [])))) for r in leg];\
-miss=[(r,t) for r,t in bad if t]; print("ok" if not miss else "missing");\
-[print(r, t[:12]) for r,t in miss]'
+rm: stop
+	docker rm $(ID)
 
-# Drop sync config and stop the legacy distribution registry.
-migrate-finish:
-	docker rm -f $(ID)
-	docker run $(DOCKER_RUN_OPTS) \
-	    -d \
-	    --name $(ID) \
-	    --network host \
-	    -v $(ZOT_DATA):/var/lib/registry \
-	    -v $$(readlink -f zot):/etc/zot:ro \
-	    -v $$(readlink -f certs):/certs:ro \
-	    $(ZOT_IMAGE) serve /etc/zot/config.json
-	docker rm -f $(ID)-legacy
-	@echo "Zot is live on https://$(SERVER_HOST):$(SERVER_PORT)/ (UI + API)"
+shell: start -shell -tty-cleanup
 
-# Kept for compatibility; Zot UI replaces docker-registry-web.
-run-web:
-	@echo "Zot UI is at https://$(SERVER_HOST):$(WEB_PORT)/ — no separate web container."
+-shell:
+	@docker exec -it $(ID) $(GUEST_SHELL)
 
-start-web:
-	@true
+-tty-cleanup:
+	@settermtitle "IMG $${PWD##*/}"
 
-stop-web:
-	@true
+net-mode:
+	@echo $(NET_MODE)
 
-rm-web:
-	@true
+addr:
+	@echo $(SERVER_HOST):$(SERVER_PORT)
 
-shell-web:
-	docker exec -it $(ID) sh
-
-deploy:
-	rsync -amv Makefile certs zot $(SERVER_HOST):docker/registry
+ip-int:
+	@docker inspect --format '{{.NetworkSettings.IPAddress}}' $(ID)

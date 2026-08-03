@@ -1,0 +1,21 @@
+[lrm-bootstrap-os]
+name=lrm bootstrap openEuler 20.03 OS
+baseurl=https://mirrors.aliyun.com/openeuler/openEuler-20.03-LTS/OS/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/openeuler/openEuler-20.03-LTS/OS/$basearch/
+        https://mirrors.ustc.edu.cn/openeuler/openEuler-20.03-LTS/OS/$basearch/
+        https://mirrors.huaweicloud.com/openeuler/openEuler-20.03-LTS/OS/$basearch/
+        https://repo.openeuler.org/openEuler-20.03-LTS/OS/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-everything]
+name=lrm bootstrap openEuler 20.03 everything
+baseurl=https://mirrors.aliyun.com/openeuler/openEuler-20.03-LTS/everything/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/openeuler/openEuler-20.03-LTS/everything/$basearch/
+        https://mirrors.ustc.edu.cn/openeuler/openEuler-20.03-LTS/everything/$basearch/
+        https://mirrors.huaweicloud.com/openeuler/openEuler-20.03-LTS/everything/$basearch/
+        https://repo.openeuler.org/openEuler-20.03-LTS/everything/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

@@ -1,0 +1,9 @@
+services:
+  base-image:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: openeuler/openeuler:20.03
+        DISTRO_SPEC: openeuler:20.03
+    image: b4f-openeuler:20.03

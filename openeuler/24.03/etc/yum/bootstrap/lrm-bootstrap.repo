@@ -19,3 +19,25 @@ baseurl=https://mirrors.aliyun.com/openeuler/openEuler-24.03-LTS/everything/$bas
 gpgcheck=0
 enabled=1
 skip_if_unavailable=1
+
+[lrm-bootstrap-update]
+name=lrm bootstrap openEuler 24.03 update
+baseurl=https://mirrors.aliyun.com/openeuler/openEuler-24.03-LTS/update/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/openeuler/openEuler-24.03-LTS/update/$basearch/
+        https://mirrors.ustc.edu.cn/openeuler/openEuler-24.03-LTS/update/$basearch/
+        https://mirrors.huaweicloud.com/openeuler/openEuler-24.03-LTS/update/$basearch/
+        https://repo.openeuler.org/openEuler-24.03-LTS/update/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-epol]
+name=lrm bootstrap openEuler 24.03 EPOL
+baseurl=https://mirrors.aliyun.com/openeuler/openEuler-24.03-LTS/EPOL/main/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/openeuler/openEuler-24.03-LTS/EPOL/main/$basearch/
+        https://mirrors.ustc.edu.cn/openeuler/openEuler-24.03-LTS/EPOL/main/$basearch/
+        https://mirrors.huaweicloud.com/openeuler/openEuler-24.03-LTS/EPOL/main/$basearch/
+        https://repo.openeuler.org/openEuler-24.03-LTS/EPOL/main/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

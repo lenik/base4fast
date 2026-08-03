@@ -1,13 +1,12 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG DISTRO_SPEC=centos:10
-ARG LRM_BWSEL_OPTS="--everything"
+ARG LRM_BWSEL_OPTS="--everything --epel"
 
 FROM quay.io/centos/centos:stream10
 
 ARG VERSION
 ARG DISTRO_SPEC
-ARG LRM_BWSEL_OPTS="--everything"
+ARG LRM_BWSEL_OPTS="--everything --epel"
 
 LABEL maintainer="Lenik <lenik@bodz.net>"
 LABEL description="CentOS/RHEL-family & uni tools"
@@ -76,22 +75,23 @@ RUN --mount=type=cache,id=centos-s10-yum-v2,target=/var/cache/yum,sharing=locked
       dnf -y --allowerasing --setopt=install_weak_deps=False install \
           libcurl glib2 libicu zlib \
           bash-completion curl findutils git gnupg2 iproute less \
-          man-db man-pages nano procps-ng rsync tar which \
+          man-db man-pages nano procps-ng rsync tar which jq ripgrep \
           glibc-langpack-en glibc-langpack-zh glibc-langpack-ja \
           glibc-langpack-ko glibc-langpack-th || \
       dnf -y --allowerasing --setopt=install_weak_deps=False install \
           libcurl glib2 libicu zlib \
           bash-completion curl findutils git gnupg2 iproute less \
-          man-db nano procps-ng rsync tar which; \
+          man-db nano procps-ng rsync tar which jq ripgrep; \
     else \
       yum -y update \
       && yum -y install \
           libcurl glib2 libicu zlib \
           bash-completion curl findutils git gnupg2 iproute less \
-          man man-pages nano procps-ng rsync tar which; \
+          man man-pages nano procps-ng rsync tar which jq ripgrep; \
     fi \
     && getbar --version \
     && mkdir -p /etc/bashrc.d \
+    && cp /tmp/src_etc/bash_alias /etc/bash_alias \
     && cp /tmp/src_etc/bash.bashrc /etc/bashrc.base4fast \
     && echo '[ -f /etc/bashrc.base4fast ] && . /etc/bashrc.base4fast' >> /etc/bashrc
 

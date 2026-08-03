@@ -17,3 +17,21 @@ baseurl=https://mirrors.aliyun.com/rockylinux/9/AppStream/$basearch/os/
 gpgcheck=0
 enabled=1
 skip_if_unavailable=1
+
+[lrm-bootstrap-crb]
+name=lrm bootstrap Rocky 9 CRB
+baseurl=https://mirrors.aliyun.com/rockylinux/9/CRB/$basearch/os/
+        https://mirrors.tuna.tsinghua.edu.cn/rocky/9/CRB/$basearch/os/
+        https://mirrors.ustc.edu.cn/rocky/9/CRB/$basearch/os/
+        https://mirrors.huaweicloud.com/rockylinux/9/CRB/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-epel]
+name=lrm bootstrap EPEL 9
+baseurl=https://mirrors.aliyun.com/epel/9/Everything/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/epel/9/Everything/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

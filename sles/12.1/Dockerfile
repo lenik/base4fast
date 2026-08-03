@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG DISTRO_SPEC=sles:12.1
 ARG LRM_BWSEL_OPTS=""
@@ -89,13 +88,14 @@ RUN --mount=type=cache,id=sles-12.1-zypp-v2,target=/var/cache/zypp,sharing=locke
     && zypper --non-interactive install --no-recommends \
         libcurl4 libglib-2_0-0 libicu zlib \
         bash-completion curl findutils git gzip iproute2 less \
-        man nano procps rsync tar which \
+        man nano procps rsync tar which jq ripgrep \
         || zypper --non-interactive install --no-recommends \
-        curl findutils git less nano procps rsync tar which \
+        curl findutils git less nano procps rsync tar which jq ripgrep \
         || true \
     && rm -f /etc/zypp/repos.d/lrm-local.repo \
     && getbar --version \
     && mkdir -p /etc/bashrc.d \
+    && cp /tmp/src_etc/bash_alias /etc/bash_alias \
     && cp /tmp/src_etc/bash.bashrc /etc/bashrc.base4fast \
     && (grep -q bashrc.base4fast /etc/bash.bashrc 2>/dev/null \
         || echo '[ -f /etc/bashrc.base4fast ] && . /etc/bashrc.base4fast' >> /etc/bash.bashrc) \

@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG BASE_IMAGE=ubuntu:resolute
 ARG DISTRO_SPEC=ubuntu:resolute
@@ -72,6 +71,8 @@ RUN --mount=type=cache,id=ubuntu-resolute-v2,target=/var/cache/apt,sharing=locke
         libglib2.0-0 \
         libicu78 \
         zlib1g \
+        jq \
+        ripgrep \
     && getbar --version \
     && (cd /tmp/src_etc && tar cf - --exclude=bak --exclude=bootstrap .) | (cd /etc && tar xpf -) \
     && apt-get update

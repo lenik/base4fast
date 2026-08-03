@@ -1,13 +1,12 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG DISTRO_SPEC=rocky:10
-ARG LRM_BWSEL_OPTS="--everything"
+ARG LRM_BWSEL_OPTS="--everything --epel"
 
 FROM quay.io/rockylinux/rockylinux:10
 
 ARG VERSION
 ARG DISTRO_SPEC
-ARG LRM_BWSEL_OPTS="--everything"
+ARG LRM_BWSEL_OPTS="--everything --epel"
 
 LABEL maintainer="Lenik <lenik@bodz.net>"
 LABEL description="Rocky Linux & uni tools"
@@ -68,10 +67,11 @@ RUN --mount=type=cache,id=rocky-10-yum-v2,target=/var/cache/yum,sharing=locked \
     dnf -y --allowerasing --setopt=install_weak_deps=False install \
         libcurl glib2 libicu zlib \
         bash-completion curl findutils git gnupg2 iproute less \
-        nano procps-ng rsync tar which \
+        nano procps-ng rsync tar which jq ripgrep \
     && dnf -y clean all \
     && getbar --version \
     && mkdir -p /etc/bashrc.d \
+    && cp /tmp/src_etc/bash_alias /etc/bash_alias \
     && cp /tmp/src_etc/bash.bashrc /etc/bashrc.base4fast \
     && echo '[ -f /etc/bashrc.base4fast ] && . /etc/bashrc.base4fast' >> /etc/bashrc
 

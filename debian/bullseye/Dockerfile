@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG BASE_IMAGE=debian:bullseye
 ARG DISTRO_SPEC=debian:bullseye
@@ -77,6 +76,8 @@ RUN --mount=type=cache,id=bullseye-v2,target=/var/cache/apt,sharing=locked \
         libglib2.0-0 \
         libicu67 \
         zlib1g \
+        jq \
+        ripgrep \
     && getbar --version \
     && (cd /tmp/src_etc && tar cf - --exclude=bak --exclude=bootstrap .) | (cd /etc && tar xpf -) \
     && apt-get update

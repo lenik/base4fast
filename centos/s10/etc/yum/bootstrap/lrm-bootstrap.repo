@@ -17,3 +17,21 @@ baseurl=https://mirrors.huaweicloud.com/centos-stream/10-stream/AppStream/$basea
 gpgcheck=0
 enabled=1
 skip_if_unavailable=1
+
+[lrm-bootstrap-crb]
+name=lrm bootstrap CentOS Stream 10 CRB
+baseurl=https://mirrors.huaweicloud.com/centos-stream/10-stream/CRB/$basearch/os/
+        https://mirrors.ustc.edu.cn/centos-stream/10-stream/CRB/$basearch/os/
+        http://mirrors.tuna.tsinghua.edu.cn/centos-stream/10-stream/CRB/$basearch/os/
+        https://mirrors.aliyun.com/centos-stream/10-stream/CRB/$basearch/os/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1
+
+[lrm-bootstrap-epel]
+name=lrm bootstrap EPEL 10
+baseurl=https://mirrors.aliyun.com/epel/10/Everything/$basearch/
+        https://mirrors.tuna.tsinghua.edu.cn/epel/10/Everything/$basearch/
+gpgcheck=0
+enabled=1
+skip_if_unavailable=1

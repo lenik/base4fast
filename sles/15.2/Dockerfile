@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG BASE_IMAGE=opensuse/leap:15.2
 ARG DISTRO_SPEC=sles:15.2
@@ -65,11 +64,12 @@ RUN --mount=type=cache,id=sles-15.2-zypp-v2,target=/var/cache/zypp,sharing=locke
     && zypper --non-interactive install --no-recommends \
         libcurl4 libglib-2_0-0 libicu zlib \
         bash-completion curl findutils git gzip iproute2 less \
-        man nano procps rsync tar which \
+        man nano procps rsync tar which jq ripgrep \
         || zypper --non-interactive install --no-recommends \
-        curl findutils git less nano procps rsync tar which \
+        curl findutils git less nano procps rsync tar which jq ripgrep \
     && getbar --version \
     && mkdir -p /etc/bashrc.d \
+    && cp /tmp/src_etc/bash_alias /etc/bash_alias \
     && cp /tmp/src_etc/bash.bashrc /etc/bashrc.base4fast \
     && (grep -q bashrc.base4fast /etc/bash.bashrc 2>/dev/null \
         || echo '[ -f /etc/bashrc.base4fast ] && . /etc/bashrc.base4fast' >> /etc/bash.bashrc) \

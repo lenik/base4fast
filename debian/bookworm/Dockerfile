@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG BASE_IMAGE=debian:bookworm
 ARG DISTRO_SPEC=debian:bookworm
@@ -69,7 +68,7 @@ RUN --mount=type=cache,id=bookworm-v2,target=/var/cache/apt,sharing=locked \
     apt-bootstrap-ca.sh \
     && apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends ${RUNTIME_PKGS} \
+    && apt-get install -y --no-install-recommends ${RUNTIME_PKGS} jq ripgrep \
     && getbar --version \
     && (cd /tmp/src_etc && tar cf - --exclude=bak --exclude=bootstrap .) | (cd /etc && tar xpf -) \
     && apt-get update

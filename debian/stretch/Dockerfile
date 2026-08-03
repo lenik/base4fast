@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG BASE_IMAGE=debian:stretch
 ARG DISTRO_SPEC=debian:stretch
@@ -76,6 +75,8 @@ RUN --mount=type=cache,id=stretch-v2,target=/var/cache/apt,sharing=locked \
         libglib2.0-0 \
         libicu57 \
         zlib1g \
+        jq \
+        ripgrep \
     && getbar --version \
     && (cd /tmp/src_etc && tar cf - --exclude=bak --exclude=bootstrap .) | (cd /etc && tar xpf -) \
     && apt-get update

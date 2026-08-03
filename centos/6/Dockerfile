@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG DISTRO_SPEC=centos:6
 
@@ -60,8 +59,9 @@ RUN --mount=type=cache,id=centos-6-yum-v2,target=/var/cache/yum,sharing=locked \
     && yum -y --exclude='*.i386' --exclude='*.i686' --skip-broken install \
           libcurl glib2 zlib \
           bash-completion curl findutils git gnupg2 iproute less \
-          man nano procps rsync tar which openssl \
+          man nano procps rsync tar which openssl jq ripgrep \
     && mkdir -p /etc/bashrc.d \
+    && cp /tmp/src_etc/bash_alias /etc/bash_alias \
     && cp /tmp/src_etc/bash.bashrc /etc/bashrc.base4fast \
     && echo '[ -f /etc/bashrc.base4fast ] && . /etc/bashrc.base4fast' >> /etc/bashrc \
     && yum clean all || true

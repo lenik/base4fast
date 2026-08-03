@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 ARG VERSION=1.0
 ARG BASE_IMAGE=debian:testing
 ARG DISTRO_SPEC=debian:testing
@@ -84,7 +83,7 @@ RUN --mount=type=cache,id=testing-v2-${TARGETARCH},target=/var/cache/apt,sharing
     apt-bootstrap-ca.sh \
     && apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends ${RUNTIME_PKGS} \
+    && apt-get install -y --no-install-recommends ${RUNTIME_PKGS} jq ripgrep \
     && getbar --version \
     && (cd /tmp/src_etc && tar cf - --exclude=bak --exclude=bootstrap .) | (cd /etc && tar xpf -) \
     && apt-get update

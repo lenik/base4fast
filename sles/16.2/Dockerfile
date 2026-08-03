@@ -17,18 +17,30 @@ LABEL version=${VERSION}
 ENV PATH="/usr/local/bin:${PATH}"
 ENV LRM_GETBAR=getbar
 
+
+# Dockerd HTTP_PROXY is for image pulls only — do not proxy container/build RUN traffic.
+ENV HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= NO_PROXY=* no_proxy=*
+
 # Keep stock SLE_BCI (public-dl.suse.com) — official packages.
 RUN --mount=type=cache,id=sles-16.2-zypp,target=/var/cache/zypp,sharing=locked \
     zypper --non-interactive --gpg-auto-import-keys refresh \
-    && zypper --non-interactive install --no-recommends bash ca-certificates
+    && zypper --non-interactive install --no-recommends bash ca-certificates curl
 
-COPY vendor/ /usr/local/
+ARG TARGETARCH=amd64
+COPY build-${TARGETARCH}/ /usr/local/
 RUN echo /usr/local/lib > /etc/ld.so.conf.d/local.conf \
     && ldconfig \
     && chmod +x /usr/local/bin/getbar /usr/local/bin/lrm \
            /usr/local/bin/zypper-via-lrm.sh \
+           /usr/local/bin/configrepo.sh /usr/local/bin/configrepo \
+           /usr/local/bin/install-net-tools.sh \
     && (test -x /usr/local/bin/drm && chmod +x /usr/local/bin/drm || true) \
     && lrm --version
+
+# ---------------------------------------------------------------------------
+# Local ISO mirror (soft-skip if unavailable) before package install.
+# ---------------------------------------------------------------------------
+RUN configrepo.sh
 
 RUN --mount=type=cache,id=sles-16.2-zypp-v2,target=/var/cache/zypp,sharing=locked \
     --mount=type=bind,source=etc,target=/tmp/src_etc \
@@ -55,7 +67,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && (localedef -i en_US -f UTF-8 en_US.UTF-8 || true)
 
-COPY --from=host_opt ./java/jdk-21.0.7 /opt/java/jdk-21.0.7
+RUN install-net-tools.sh
 
 RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
     if ! id -u lenik >/dev/null 2>&1; then \

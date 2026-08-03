@@ -7,11 +7,10 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
-  }
+  network = "host"
   tags = [
-    "base4fast:sles-15.2",
-    "base4fast:sles-15.2-${VERSION}"
+    "b4f-sles:15.2",
+    "b4f-sles:15.2-amd64",
+    "b4f-sles:15.2-${VERSION}-amd64",
   ]
 }

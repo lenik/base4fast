@@ -7,11 +7,15 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
   }
+  platforms = ["linux/${arch}"]
   tags = [
-    "base4fast:rocky-9",
-    "base4fast:rocky-9-${VERSION}"
+    "b4f-rocky:9",
+    "b4f-rocky:9-${arch}",
+    "b4f-rocky:9-${VERSION}-${arch}",
   ]
 }

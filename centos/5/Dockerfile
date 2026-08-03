@@ -14,6 +14,10 @@ LABEL version=${VERSION}
 ENV PATH="/usr/local/bin:${PATH}"
 ENV LRM_GETBAR=getbar
 
+
+# Dockerd HTTP_PROXY is for image pulls only — do not proxy container/build RUN traffic.
+ENV HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= NO_PROXY=* no_proxy=*
+
 # ---------------------------------------------------------------------------
 # 1. Bootstrap yum from HTTP centos-vault (CentOS 5 cannot use modern TLS).
 #    Keep these repos permanently — no bwsel/getbar (glibc too old for
@@ -29,15 +33,23 @@ RUN --mount=type=cache,id=centos-5-yum,target=/var/cache/yum,sharing=locked \
     && yum clean all || true
 
 # ---------------------------------------------------------------------------
-# 2. Stub getbar/lrm (vendor from build-lrm-tools-stub.sh).
+# 2. Stub getbar/lrm (build-<arch>/ from build-lrm-tools-stub.sh).
 # ---------------------------------------------------------------------------
-COPY vendor/ /usr/local/
+ARG TARGETARCH
+COPY build-${TARGETARCH}/ /usr/local/
 RUN echo /usr/local/lib > /etc/ld.so.conf.d/local.conf \
     && ldconfig \
     && chmod +x /usr/local/bin/lrm /usr/local/bin/yum-via-lrm.sh /usr/local/bin/getbar \
+           /usr/local/bin/configrepo.sh /usr/local/bin/configrepo \
+           /usr/local/bin/install-net-tools.sh \
     && (test -x /usr/local/bin/drm && chmod +x /usr/local/bin/drm || true) \
     && lrm --version \
     && getbar --version
+
+# ---------------------------------------------------------------------------
+# Local ISO mirror (soft-skip if unavailable) before vault packages.
+# ---------------------------------------------------------------------------
+RUN configrepo.sh
 
 # ---------------------------------------------------------------------------
 # 3. Install runtime deps from fixed HTTP vault mirrors.
@@ -60,7 +72,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && (localedef -i en_US -f UTF-8 en_US.UTF-8 || true)
 
-COPY --from=host_opt ./java/jdk-11 /opt/java/jdk-11
+RUN install-net-tools.sh
 
 RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
     if ! id -u lenik >/dev/null 2>&1; then \

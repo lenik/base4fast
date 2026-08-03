@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
 ARG VERSION=1.0
+ARG BASE_IMAGE=opensuse/leap:15.2
 ARG DISTRO_SPEC=sles:15.2
 ARG LRM_BWSEL_OPTS=""
 
 # SLES 15 SP2 twin: openSUSE Leap 15.2 (glibc 2.26). Hub tag is opensuse/leap:15.2 (archive:15.2 not published).
-FROM opensuse/leap:15.2
+FROM ${BASE_IMAGE}
 
 ARG VERSION
 ARG DISTRO_SPEC
@@ -17,6 +18,10 @@ LABEL version=${VERSION}
 ENV PATH="/usr/local/bin:${PATH}"
 ENV LRM_GETBAR=getbar
 
+
+# Dockerd HTTP_PROXY is for image pulls only — do not proxy container/build RUN traffic.
+ENV HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= NO_PROXY=* no_proxy=*
+
 # ---------------------------------------------------------------------------
 # 1. Bootstrap zypper — China openSUSE mirrors (no SCC required).
 # ---------------------------------------------------------------------------
@@ -26,23 +31,28 @@ RUN --mount=type=cache,id=sles-15.2-zypp,target=/var/cache/zypp,sharing=locked \
     && (shopt -s nullglob; for f in /etc/zypp/repos.d/*.repo; do mv -f "$f" /etc/zypp/repos.d/bak/; done) \
     && cp /tmp/src_etc/zypp/bootstrap/lrm-bootstrap.repo /etc/zypp/repos.d/ \
     && zypper --non-interactive --gpg-auto-import-keys refresh \
-    && zypper --non-interactive install --no-recommends bash ca-certificates \
+    && zypper --non-interactive install --no-recommends bash ca-certificates curl \
     && rm -f /etc/zypp/repos.d/lrm-bootstrap.repo
 
 # ---------------------------------------------------------------------------
-# 2. Suite-specific getbar/lrm (built on host with build4 → vendor/)
+# 2. Suite-specific getbar/lrm (built on host with build4 → build-<arch>/)
 # ---------------------------------------------------------------------------
-COPY vendor/ /usr/local/
+ARG TARGETARCH=amd64
+COPY build-${TARGETARCH}/ /usr/local/
 RUN echo /usr/local/lib > /etc/ld.so.conf.d/local.conf \
     && ldconfig \
     && chmod +x /usr/local/bin/getbar /usr/local/bin/lrm \
            /usr/local/bin/zypper-via-lrm.sh \
+           /usr/local/bin/configrepo.sh /usr/local/bin/configrepo \
+           /usr/local/bin/install-net-tools.sh \
     && (test -x /usr/local/bin/drm && chmod +x /usr/local/bin/drm || true) \
     && lrm --version
 
 # ---------------------------------------------------------------------------
-# 3. Select fastest mirror with lrm bwsel (inside the image)
+# Local ISO mirror (configrepo) then lrm bwsel.
 # ---------------------------------------------------------------------------
+RUN configrepo.sh
+
 RUN zypper-via-lrm.sh "${DISTRO_SPEC}" ${LRM_BWSEL_OPTS}
 
 # ---------------------------------------------------------------------------
@@ -73,7 +83,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && (localedef -i en_US -f UTF-8 en_US.UTF-8 || true)
 
-COPY --from=host_opt ./java/jdk-17 /opt/java/jdk-17
+RUN install-net-tools.sh
 
 RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
     if ! id -u lenik >/dev/null 2>&1; then \

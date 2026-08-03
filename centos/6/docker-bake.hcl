@@ -7,11 +7,10 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
-  }
+  network = "host"
   tags = [
-    "base4fast:centos-6",
-    "base4fast:centos-6-${VERSION}"
+    "b4f-centos:6",
+    "b4f-centos:6-amd64",
+    "b4f-centos:6-${VERSION}-amd64",
   ]
 }

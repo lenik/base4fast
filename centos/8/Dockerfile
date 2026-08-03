@@ -16,6 +16,10 @@ LABEL version=${VERSION}
 ENV PATH="/usr/local/bin:${PATH}"
 ENV LRM_GETBAR=getbar
 
+
+# Dockerd HTTP_PROXY is for image pulls only — do not proxy container/build RUN traffic.
+ENV HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= NO_PROXY=* no_proxy=*
+
 # ---------------------------------------------------------------------------
 # 1. Bootstrap yum/dnf — only enough to run lrm selection.
 # ---------------------------------------------------------------------------
@@ -26,26 +30,31 @@ RUN --mount=type=cache,id=centos-8-yum,target=/var/cache/yum,sharing=locked \
     && (shopt -s nullglob; for f in /etc/yum.repos.d/*.repo; do mv -f "$f" /etc/yum.repos.d/bak/; done) \
     && cp /tmp/src_etc/yum/bootstrap/lrm-bootstrap.repo /etc/yum.repos.d/ \
     && if command -v dnf >/dev/null 2>&1; then \
-         dnf -y --setopt=install_weak_deps=False install bash ca-certificates; \
+         dnf -y --setopt=install_weak_deps=False install bash ca-certificates curl; \
        else \
-         yum -y install bash ca-certificates; \
+         yum -y install bash ca-certificates curl; \
        fi \
     && rm -f /etc/yum.repos.d/lrm-bootstrap.repo
 
 # ---------------------------------------------------------------------------
-# 2. Suite-specific getbar/lrm (built on host with build4 → vendor/)
+# 2. Suite-specific getbar/lrm (built on host with build4 → build-<arch>/)
 # ---------------------------------------------------------------------------
-COPY vendor/ /usr/local/
+ARG TARGETARCH
+COPY build-${TARGETARCH}/ /usr/local/
 RUN echo /usr/local/lib > /etc/ld.so.conf.d/local.conf \
     && ldconfig \
     && chmod +x /usr/local/bin/getbar /usr/local/bin/lrm \
            /usr/local/bin/yum-via-lrm.sh \
+           /usr/local/bin/configrepo.sh /usr/local/bin/configrepo \
+           /usr/local/bin/install-net-tools.sh \
     && (test -x /usr/local/bin/drm && chmod +x /usr/local/bin/drm || true) \
     && lrm --version
 
 # ---------------------------------------------------------------------------
-# 3. Select fastest mirror with lrm bwsel (inside the image)
+# Local ISO mirror (configrepo) then lrm bwsel.
 # ---------------------------------------------------------------------------
+RUN configrepo.sh
+
 RUN yum-via-lrm.sh "${DISTRO_SPEC}" ${LRM_BWSEL_OPTS}
 
 # ---------------------------------------------------------------------------
@@ -90,7 +99,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && (localedef -i en_US -f UTF-8 en_US.UTF-8 || true)
 
-COPY --from=host_opt ./java/jdk-17 /opt/java/jdk-17
+RUN install-net-tools.sh
 
 RUN groupadd -g 700 dev 2>/dev/null || groupadd --gid 700 dev || true; \
     if ! id -u lenik >/dev/null 2>&1; then \

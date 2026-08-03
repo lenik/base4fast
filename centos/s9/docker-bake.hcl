@@ -7,11 +7,15 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
   }
+  platforms = ["linux/${arch}"]
   tags = [
-    "base4fast:centos-s9",
-    "base4fast:centos-s9-${VERSION}"
+    "b4f-centos:s9",
+    "b4f-centos:s9-${arch}",
+    "b4f-centos:s9-${VERSION}-${arch}",
   ]
 }

@@ -3,6 +3,4 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:centos-5
+    image: b4f-centos:5

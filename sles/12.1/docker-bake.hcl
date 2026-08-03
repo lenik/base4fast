@@ -7,12 +7,14 @@ group "default" {
 }
 
 target "base-image" {
+  network = "host"
   contexts = {
-    host_opt = "/opt"
     leap42_repo = "../../scripts/build4-bins/leap42.1-repo"
   }
+
   tags = [
-    "base4fast:sles-12.1",
-    "base4fast:sles-12.1-${VERSION}"
+    "b4f-sles:12.1",
+    "b4f-sles:12.1-amd64",
+    "b4f-sles:12.1-${VERSION}-amd64",
   ]
 }

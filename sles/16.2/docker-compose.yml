@@ -3,6 +3,4 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:sles-16.2
+    image: b4f-sles:16.2

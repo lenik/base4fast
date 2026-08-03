@@ -158,7 +158,7 @@ genhtpasswd-force:
 # Lifecycle
 # ---------------------------------------------------------------------------
 
-run: -run-docker -tty-cleanup
+up: -run-docker -tty-cleanup
 
 -run-docker: run-zot
 
@@ -188,12 +188,14 @@ post-start:
 
 stop: pre-stop -stop post-stop
 -stop:
-	docker stop $(ID)
+	-docker stop $(ID)
 pre-stop:
 post-stop:
 
-rm: stop
-	docker rm $(ID)
+down: stop rm
+
+rm:
+	-docker rm $(ID)
 
 shell: start -shell -tty-cleanup
 

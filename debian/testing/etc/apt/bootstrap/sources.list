@@ -1,0 +1,3 @@
+deb http://mirrors.aliyun.com/debian/ testing main contrib non-free non-free-firmware
+deb http://mirrors.aliyun.com/debian/ testing-updates main contrib non-free non-free-firmware
+deb http://mirrors.aliyun.com/debian-security testing-security main contrib non-free non-free-firmware

@@ -1,8 +1,0 @@
-# deb http://deb-multimedia.org stretch main
-# deb http://deb-multimedia.org stretch non-free
-# deb http://deb-multimedia.org stretch contrib
-
-deb http://ftp.kaist.ac.kr/debian-multimedia/ stretch main
-deb http://ftp.kaist.ac.kr/debian-multimedia/ stretch non-free
-deb http://ftp.kaist.ac.kr/debian-multimedia/ stretch contrib
-

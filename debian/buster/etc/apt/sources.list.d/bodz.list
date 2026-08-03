@@ -1,12 +1,4 @@
-# @bodz::stable
-deb     [trusted=yes] http://47.92.89.119:8100/ stable/
-# @bodz::stable-src
-deb-src [trusted=yes] http://47.92.89.119:8100/ stable/
-# @bodz::testing
-deb     [trusted=yes] http://47.92.89.119:8100/ testing/
-# @bodz::testing-src
-deb-src [trusted=yes] http://47.92.89.119:8100/ testing/
-# @bodz::unstable
-deb     [trusted=yes] http://47.92.89.119:8100/ unstable/
-# @bodz::unstable-src
-deb-src [trusted=yes] http://47.92.89.119:8100/ unstable/
+# Bodz private packages
+deb [trusted=yes] http://183.131.83.99:1240/ stable main
+deb [trusted=yes] http://183.131.83.99:1240/ testing main
+deb [trusted=yes] http://183.131.83.99:1240/ unstable main

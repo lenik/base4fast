@@ -1,6 +1,0 @@
-deb     http://mirrors.163.com/debian/ bookworm main
-deb-src http://mirrors.163.com/debian/ bookworm main
-deb     http://mirrors.163.com/debian/ bookworm non-free
-deb-src http://mirrors.163.com/debian/ bookworm non-free
-deb     http://mirrors.163.com/debian/ bookworm contrib
-deb-src http://mirrors.163.com/debian/ bookworm contrib

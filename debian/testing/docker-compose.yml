@@ -1,0 +1,17 @@
+services:
+  base-image:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: debian:testing
+        DISTRO_SPEC: debian:testing
+    image: b4f-debian:testing
+  base-image-slim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: debian:testing-slim
+        DISTRO_SPEC: debian:testing
+    image: b4f-debian:testing-slim

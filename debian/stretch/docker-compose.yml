@@ -3,6 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:stretch
+      args:
+        BASE_IMAGE: debian:stretch
+    image: b4f-debian:stretch
+  base-image-slim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: debian:stretch-slim
+    image: b4f-debian:stretch-slim

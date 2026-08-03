@@ -3,15 +3,39 @@ variable "VERSION" {
 }
 
 group "default" {
-  targets = ["base-image"]
+  targets = ["base-image", "base-image-slim"]
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "debian:bullseye"
   }
   tags = [
-    "base4fast:bullseye",
-    "base4fast:bullseye-${VERSION}"
+    "b4f-debian:bullseye",
+    "b4f-debian:bullseye-${arch}",
+    "b4f-debian:bullseye-${VERSION}-${arch}",
+  ]
+}
+
+target "base-image-slim" {
+  network = "host"
+  name = "base-image-slim-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "debian:bullseye-slim"
+  }
+  tags = [
+    "b4f-debian:bullseye-slim",
+    "b4f-debian:bullseye-slim-${arch}",
+    "b4f-debian:bullseye-slim-${VERSION}-${arch}",
   ]
 }

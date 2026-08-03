@@ -1,0 +1,6 @@
+# Bodz private packages
+Types: deb
+URIs: http://183.131.83.99:1240/
+Suites: stable testing unstable
+Components: main
+Trusted: yes

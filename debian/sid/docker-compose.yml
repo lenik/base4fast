@@ -1,0 +1,21 @@
+services:
+  base-image:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: debian:sid
+        DISTRO_SPEC: debian:sid
+        LRM_BWSEL_OPTS: "--no-updates --no-security --no-backports --no-src"
+        RUNTIME_PKGS: "libcurl4t64 libglib2.0-0t64 libicu78 zlib1g"
+    image: b4f-debian:sid
+  base-image-slim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: debian:sid-slim
+        DISTRO_SPEC: debian:sid
+        LRM_BWSEL_OPTS: "--no-updates --no-security --no-backports --no-src"
+        RUNTIME_PKGS: "libcurl4t64 libglib2.0-0t64 libicu78 zlib1g"
+    image: b4f-debian:sid-slim

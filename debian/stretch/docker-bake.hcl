@@ -3,15 +3,39 @@ variable "VERSION" {
 }
 
 group "default" {
-  targets = ["base-image"]
+  targets = ["base-image", "base-image-slim"]
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "debian:stretch"
   }
   tags = [
-    "base4fast:stretch",
-    "base4fast:stretch-${VERSION}"
+    "b4f-debian:stretch",
+    "b4f-debian:stretch-${arch}",
+    "b4f-debian:stretch-${VERSION}-${arch}",
+  ]
+}
+
+target "base-image-slim" {
+  network = "host"
+  name = "base-image-slim-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "debian:stretch-slim"
+  }
+  tags = [
+    "b4f-debian:stretch-slim",
+    "b4f-debian:stretch-slim-${arch}",
+    "b4f-debian:stretch-slim-${VERSION}-${arch}",
   ]
 }

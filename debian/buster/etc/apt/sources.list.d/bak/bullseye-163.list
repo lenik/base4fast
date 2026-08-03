@@ -1,6 +1,0 @@
-deb     http://mirrors.163.com/debian/ bullseye main
-deb-src http://mirrors.163.com/debian/ bullseye main
-deb     http://mirrors.163.com/debian/ bullseye non-free
-deb-src http://mirrors.163.com/debian/ bullseye non-free
-deb     http://mirrors.163.com/debian/ bullseye contrib
-deb-src http://mirrors.163.com/debian/ bullseye contrib

@@ -1,6 +1,0 @@
-deb     http://mirrors.aliyun.com/debian/ bookworm main
-deb-src http://mirrors.aliyun.com/debian/ bookworm main
-deb     http://mirrors.aliyun.com/debian/ bookworm non-free
-deb-src http://mirrors.aliyun.com/debian/ bookworm non-free
-deb     http://mirrors.aliyun.com/debian/ bookworm contrib
-deb-src http://mirrors.aliyun.com/debian/ bookworm contrib

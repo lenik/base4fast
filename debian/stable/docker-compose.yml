@@ -1,0 +1,17 @@
+services:
+  base-image:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: debian:stable
+        DISTRO_SPEC: debian:stable
+    image: b4f-debian:stable
+  base-image-slim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: debian:stable-slim
+        DISTRO_SPEC: debian:stable
+    image: b4f-debian:stable-slim

@@ -1,0 +1,3 @@
+deb http://mirrors.aliyun.com/debian/ stable main contrib non-free non-free-firmware
+deb http://mirrors.aliyun.com/debian/ stable-updates main contrib non-free non-free-firmware
+deb http://mirrors.aliyun.com/debian-security stable-security main contrib non-free non-free-firmware

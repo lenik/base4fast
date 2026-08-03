@@ -1,6 +1,0 @@
-deb     http://mirrors.aliyun.com/debian/ trixie main
-deb-src http://mirrors.aliyun.com/debian/ trixie main
-deb     http://mirrors.aliyun.com/debian/ trixie non-free
-deb-src http://mirrors.aliyun.com/debian/ trixie non-free
-deb     http://mirrors.aliyun.com/debian/ trixie contrib
-deb-src http://mirrors.aliyun.com/debian/ trixie contrib

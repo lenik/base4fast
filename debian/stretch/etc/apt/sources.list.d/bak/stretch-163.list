@@ -1,7 +1,0 @@
-deb     http://mirrors.163.com/debian-archive/debian/ stretch main
-deb-src http://mirrors.163.com/debian-archive/debian/ stretch main
-deb     http://mirrors.163.com/debian-archive/debian/ stretch non-free
-deb-src http://mirrors.163.com/debian-archive/debian/ stretch non-free
-deb     http://mirrors.163.com/debian-archive/debian/ stretch contrib
-deb-src http://mirrors.163.com/debian-archive/debian/ stretch contrib
-

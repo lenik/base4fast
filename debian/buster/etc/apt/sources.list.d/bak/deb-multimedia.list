@@ -1,8 +1,0 @@
-# deb http://deb-multimedia.org buster main
-# deb http://deb-multimedia.org buster non-free
-# deb http://deb-multimedia.org buster contrib
-
-deb http://ftp.kaist.ac.kr/debian-multimedia/ buster main
-deb http://ftp.kaist.ac.kr/debian-multimedia/ buster non-free
-deb http://ftp.kaist.ac.kr/debian-multimedia/ buster contrib
-

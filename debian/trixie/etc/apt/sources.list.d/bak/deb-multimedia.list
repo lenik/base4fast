@@ -1,8 +1,0 @@
-# deb http://deb-multimedia.org trixie main
-# deb http://deb-multimedia.org trixie non-free
-# deb http://deb-multimedia.org trixie contrib
-
-deb http://ftp.kaist.ac.kr/debian-multimedia/ trixie main
-deb http://ftp.kaist.ac.kr/debian-multimedia/ trixie non-free
-deb http://ftp.kaist.ac.kr/debian-multimedia/ trixie contrib
-

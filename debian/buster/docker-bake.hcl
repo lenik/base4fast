@@ -3,15 +3,39 @@ variable "VERSION" {
 }
 
 group "default" {
-  targets = ["base-image"]
+  targets = ["base-image", "base-image-slim"]
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "debian:buster"
   }
   tags = [
-    "base4fast:buster",
-    "base4fast:buster-${VERSION}"
+    "b4f-debian:buster",
+    "b4f-debian:buster-${arch}",
+    "b4f-debian:buster-${VERSION}-${arch}",
+  ]
+}
+
+target "base-image-slim" {
+  network = "host"
+  name = "base-image-slim-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "debian:buster-slim"
+  }
+  tags = [
+    "b4f-debian:buster-slim",
+    "b4f-debian:buster-slim-${arch}",
+    "b4f-debian:buster-slim-${VERSION}-${arch}",
   ]
 }

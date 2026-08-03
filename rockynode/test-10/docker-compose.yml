@@ -1,0 +1,43 @@
+# Thin smoke-test instance for b4f-rockynode:10
+# Image: packages + default configs (/etc/rockynode/). No services started in-image.
+# This instance: scripts/entrypoint.sh starts services and creates the app DB.
+# Override configs via ./overrides → /etc/rockynode.d/.
+#
+# Ports (host → container):
+#   15432→5432  postgres   16379→6379  redis   18080→80  nginx
+#   15671→5672  amqp       15672→15672 mgmt    11883→1883 mqtt
+
+name: rockynode-test-10
+
+services:
+  rockynode:
+    image: b4f-rockynode:10
+    container_name: rockynode-test-10
+    hostname: rockynode-test-10
+    shm_size: "256m"
+    ports:
+      - "15432:5432"
+      - "16379:6379"
+      - "18080:80"
+      - "15672:15672"
+      - "15671:5672"
+      - "11883:1883"
+    volumes:
+      - ./data/pgsql:/var/lib/pgsql/data
+      - ./data/valkey:/var/lib/valkey
+      - ./data/rabbitmq:/var/lib/rabbitmq
+      - ./data/mosquitto:/var/lib/mosquitto
+      # instance start script (services + app DB):
+      - ./scripts/entrypoint.sh:/usr/local/bin/rockynode-test-start:ro
+      # optional instance overrides (drop files here):
+      - ./overrides:/etc/rockynode.d:ro
+      # optional site content:
+      - ./www:/usr/share/nginx/html:ro
+    environment:
+      POSTGRES_DB: rockynode
+      POSTGRES_USER: rockynode
+      POSTGRES_PASSWORD: rockynode
+      PGDATA: /var/lib/pgsql/data
+      RABBITMQ_NODENAME: rabbit@localhost
+    entrypoint: ["/usr/local/bin/rockynode-test-start"]
+    restart: unless-stopped

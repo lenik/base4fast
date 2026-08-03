@@ -16,11 +16,18 @@ ENV NVM_DIR=/usr/local/nvm
 ENV NODE_VERSION=${NODE_VERSION}
 ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 
+# Neutral defaults for the shared base (apps like mpss set their own locale/TZ).
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    TZ=Asia/Shanghai
+
 # ---------------------------------------------------------------------------
 # 1. EPEL + packages (bwsel+install in one layer; fall back if mirror 404s)
 # ---------------------------------------------------------------------------
 RUN --mount=type=cache,id=rockynode-10-dnf-v3,target=/var/cache/dnf,sharing=locked \
     set -e; \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime; \
+    echo $TZ > /etc/timezone; \
     ensure_repos() { \
       yum-via-lrm.sh rocky:10 --everything --epel; \
       dnf -y clean metadata >/dev/null 2>&1 || true; \
@@ -43,7 +50,10 @@ RUN --mount=type=cache,id=rockynode-10-dnf-v3,target=/var/cache/dnf,sharing=lock
         valkey \
         mosquitto \
         postgresql postgresql-server postgresql-contrib postgis \
-        glibc-langpack-en \
+        glibc-langpack-en glibc-langpack-de glibc-langpack-zh \
+        glibc-langpack-ja glibc-langpack-ko glibc-langpack-ru \
+        glibc-langpack-th glibc-langpack-vi glibc-langpack-it \
+        glibc-langpack-ar glibc-langpack-he glibc-langpack-eo \
         logrotate \
         which \
     && dnf -y clean all \
@@ -72,15 +82,6 @@ RUN mkdir -p /etc/rockynode.d /var/lib/valkey /var/lib/mosquitto /var/lib/rabbit
              /var/lib/pgsql /var/run/postgresql \
     && chown -R postgres:postgres /var/lib/pgsql /var/run/postgresql \
     && rabbitmq-plugins enable --offline rabbitmq_management >/dev/null 2>&1 || true
-
-# Neutral defaults for the shared base (apps like mpss set their own locale/TZ).
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8 \
-    TZ=UTC
-
-RUN ln -snf /usr/share/zoneinfo/UTC /etc/localtime \
-    && echo UTC > /etc/timezone \
-    && (localedef -i en_US -f UTF-8 en_US.UTF-8 || true)
 
 EXPOSE 5432 6379 80 443 5672 15672 1883
 
@@ -146,21 +147,22 @@ ENV PNPM_STORE_DIR=/var/cache/pnpm/store \
     npm_config_store_dir=/var/cache/pnpm/store
 
 # System + node-user npmrc (pnpm prefers ~/.npmrc).
+# Do NOT chown -R the store here — COPY --chown already owns it; recursive
+# chown on ~10k CAFS files is minutes of build time for no benefit.
 RUN printf '%s\n' \
       'store-dir=/var/cache/pnpm/store' \
       'registry=https://registry.npmmirror.com' \
       | tee /etc/npmrc /home/node/.npmrc >/dev/null \
     && chown node:node /home/node/.npmrc \
     && test -d /var/cache/pnpm/store/v3 \
-    && chown -R node:node /var/cache/pnpm /opt/minimal \
     && printf '%s\n' \
          'export PNPM_STORE_DIR=/var/cache/pnpm/store' \
          'export npm_config_store_dir=/var/cache/pnpm/store' \
          > /etc/profile.d/pnpm-store.sh \
     && chmod 644 /etc/profile.d/pnpm-store.sh /etc/npmrc \
-    && echo "pnpm store ready: $(du -sh /var/cache/pnpm/store | awk '{print $1}') owned by $(stat -c '%U:%G' /var/cache/pnpm/store)"
-
-RUN printf '%s\n' \
+    && echo "pnpm store ready: $(du -sh /var/cache/pnpm/store | awk '{print $1}') owned by $(stat -c '%U:%G' /var/cache/pnpm/store)" \
+    ; \
+    printf '%s\n' \
       "export NVM_DIR=\"${NVM_DIR}\"" \
       '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' \
       > /etc/profile.d/nvm.sh \

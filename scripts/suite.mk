@@ -12,17 +12,23 @@ TOOLS_SCRIPT ?= ../../scripts/build-lrm-tools.sh
 # FAMILY/SUITE derived from directory (…/debian/bookworm → debian/bookworm)
 SUITE_SPEC := $(patsubst $(abspath $(CURDIR)/../..)/%,%,$(abspath $(CURDIR)))
 
-.PHONY: tools bake build buildx
+.DEFAULT_GOAL := bake
+
+.PHONY: prepare tools bake build buildx
+
+# Copy scripts/bash_alias (and other shared files) into etc/ for the image build.
+prepare:
+	../../scripts/prepare-common.sh $(SUITE_SPEC)
 
 tools:
 	BUILD4="$(BUILD4)" $(TOOLS_SCRIPT) $(SUITE_SPEC)
 
-bake: tools
+bake: prepare tools
 	SKIP_TOOLS=1 PULL="$(PULL)" PULL_MAX_AGE="$(PULL_MAX_AGE)" \
 		../../scripts/bake-suite.sh $(SUITE_SPEC)
 
-build: tools
+build: prepare tools
 	docker compose build
 
-buildx: tools
+buildx: prepare tools
 	docker buildx build .

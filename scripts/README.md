@@ -2,12 +2,16 @@
 
 Host workflow (per suite, see `<family>/<suite>/Makefile`):
 
-1. `make tools` → `scripts/build-lrm-tools.sh FAMILY/SUITE`
+1. `make prepare` → `scripts/prepare-common.sh FAMILY/SUITE`
+   - copies shared files into suite `etc/` (e.g. `scripts/bash_alias` → `etc/bash_alias`)
+   - generated files are gitignored; do not hardlink
+2. `make tools` → `scripts/build-lrm-tools.sh FAMILY/SUITE`
    - uses `extern/` clones read-only (clone once; set `VENDOR_UPDATE=1` to refresh from GitHub)
    - deps: `getbar`, `repoman`, `bas-c`, `includes` (for bas-c unit-test discovery), optional `subprojects/`
    - build4 compiles getbar/lrm against the suite target image for each `ARCH` (`amd64` / `arm64`)
    - writes `<family>/<suite>/build-<arch>/`
-2. `make bake` / `make build` → Docker image (`COPY build-${TARGETARCH}/`, then `lrm bwsel` inside)
+3. `make bake` / `make build` → Docker image (`COPY build-${TARGETARCH}/`, then `lrm bwsel` inside)
+   - both targets run `prepare` first
 
 Host bas-c tests need the `includes` CLI on `PATH` (system package, or a local build of `extern/includes`).
 
@@ -86,6 +90,8 @@ do not send traffic through the pull proxy.
 
 | Script | Role |
 |--------|------|
+| `warn-cross-qemu.sh` | Host: refuse qemu cross-arch bake when RAM/swap is tight (no prompt; skip foreign) |
+| `prepare-common.sh` | Host: copy shared files (`bash_alias`, …) into suite `etc/` |
 | `build-lrm-tools.sh` | Host: build4 getbar/lrm into `build-<arch>/` |
 | `build4-prescript.sh` | Inside build4 (Debian/Ubuntu): apt toolchain |
 | `build4-prescript-rpm.sh` | Inside build4 (CentOS/Rocky/openEuler): yum/dnf toolchain |

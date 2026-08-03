@@ -15,6 +15,8 @@
 #                always — ask Hub first; on timeout fall back to local-only
 #   PULL_MAX_AGE  max age of local bases before prefer rechecks Hub (default 168h).
 #                 0 = always recheck Hub in prefer mode.
+#   CROSS_QEMU_OK=1  force qemu cross-arch bake despite low memory
+#   CROSS_QEMU_MIN_AVAIL_MB / CROSS_QEMU_MAX_SWAP_MB  — see warn-cross-qemu.sh
 
 set -euo pipefail
 
@@ -25,6 +27,26 @@ SUITE_DIR="$ROOT/$SPEC"
 
 log() { printf 'bake-suite: %s\n' "$*" >&2; }
 die() { printf 'bake-suite: error: %s\n' "$*" >&2; exit 1; }
+
+host_docker_arch() {
+  case "$(uname -m)" in
+  x86_64|amd64) echo amd64 ;;
+  aarch64|arm64) echo arm64 ;;
+  loongarch64) echo loong64 ;;
+  *) uname -m ;;
+  esac
+}
+
+target_arch_of() {
+  # base-image-amd64 → amd64; bare base-image → host
+  local t=$1
+  case "$t" in
+  *-amd64) echo amd64 ;;
+  *-arm64) echo arm64 ;;
+  *loong64*) echo loong64 ;;
+  *) host_docker_arch ;;
+  esac
+}
 
 [[ -f "$SUITE_DIR/docker-bake.hcl" ]] || die "missing $SUITE_DIR/docker-bake.hcl"
 [[ -f "$SUITE_DIR/Makefile" ]] || die "missing $SUITE_DIR/Makefile"
@@ -40,21 +62,10 @@ prefer|auto|missing|"") PULL_MODE=prefer ;;
 esac
 PULL_MAX_AGE="${PULL_MAX_AGE:-168h}"
 
-cd "$SUITE_DIR"
+# Shared etc files (bash_alias, …) — not hardlinked; regenerated each bake.
+"$ROOT/scripts/prepare-common.sh" "$SPEC"
 
-if [[ "${SKIP_TOOLS:-0}" != "1" ]]; then
-  if [[ -n "$ARCH" ]]; then
-    case "$ARCH" in
-    amd64|arm64|loong64) ;;
-    *) die "unsupported ARCH=$ARCH (want amd64|arm64|loong64)" ;;
-    esac
-    log "tools $SPEC ARCH=$ARCH"
-    BUILD4="$BUILD4" ARCH="$ARCH" "$ROOT/scripts/build-lrm-tools.sh" "$SPEC"
-  else
-    log "tools $SPEC (suite Makefile arches)"
-    BUILD4="$BUILD4" make tools
-  fi
-fi
+cd "$SUITE_DIR"
 
 bake_print_json() {
   BUILDX_BAKE_ENTITLEMENTS_FS=0 docker buildx bake --print "$@" 2>/dev/null
@@ -69,6 +80,10 @@ SELECTED=()
 if [[ -z "$ARCH" ]]; then
   SELECTED=("${ALL_TARGETS[@]}")
 else
+  case "$ARCH" in
+  amd64|arm64|loong64) ;;
+  *) die "unsupported ARCH=$ARCH (want amd64|arm64|loong64)" ;;
+  esac
   for t in "${ALL_TARGETS[@]}"; do
     case "$ARCH" in
     amd64)
@@ -85,6 +100,62 @@ fi
 if [[ ${#SELECTED[@]} -eq 0 ]]; then
   log "skip $SPEC: no targets for ARCH=${ARCH:-all}"
   exit 0
+fi
+
+# Planned arches for qemu memory guard (before tools / docker build).
+PLANNED_ARCHES=()
+for t in "${SELECTED[@]}"; do
+  PLANNED_ARCHES+=("$(target_arch_of "$t")")
+done
+mapfile -t PLANNED_ARCHES < <(printf '%s\n' "${PLANNED_ARCHES[@]}" | sort -u)
+
+SKIP_FOREIGN=0
+set +e
+"$ROOT/scripts/warn-cross-qemu.sh" "${PLANNED_ARCHES[@]}"
+_wrc=$?
+set -e
+case "$_wrc" in
+0) ;;
+2)
+  SKIP_FOREIGN=1
+  HOST_A="$(host_docker_arch)"
+  _kept=()
+  for t in "${SELECTED[@]}"; do
+    ta="$(target_arch_of "$t")"
+    if [[ "$ta" == "$HOST_A" ]]; then
+      _kept+=("$t")
+    else
+      log "skip qemu target $t (arch=$ta) due to low memory"
+    fi
+  done
+  SELECTED=("${_kept[@]+"${_kept[@]}"}")
+  if [[ ${#SELECTED[@]} -eq 0 ]]; then
+    log "skip $SPEC: only cross-arch targets requested and memory is too low for qemu"
+    exit 0
+  fi
+  log "continuing with native-arch targets only: ${SELECTED[*]}"
+  # Refresh planned arches after filtering.
+  PLANNED_ARCHES=()
+  for t in "${SELECTED[@]}"; do
+    PLANNED_ARCHES+=("$(target_arch_of "$t")")
+  done
+  mapfile -t PLANNED_ARCHES < <(printf '%s\n' "${PLANNED_ARCHES[@]}" | sort -u)
+  ;;
+*)
+  die "warn-cross-qemu failed (exit $_wrc)"
+  ;;
+esac
+
+if [[ "${SKIP_TOOLS:-0}" != "1" ]]; then
+  if [[ -n "$ARCH" && "$SKIP_FOREIGN" -eq 0 ]]; then
+    log "tools $SPEC ARCH=$ARCH"
+    BUILD4="$BUILD4" ARCH="$ARCH" "$ROOT/scripts/build-lrm-tools.sh" "$SPEC"
+  else
+    for a in "${PLANNED_ARCHES[@]}"; do
+      log "tools $SPEC ARCH=$a"
+      BUILD4="$BUILD4" ARCH="$a" "$ROOT/scripts/build-lrm-tools.sh" "$SPEC"
+    done
+  fi
 fi
 
 # Filter SELECTED to targets whose BASE_IMAGE exists locally for the target platform.
@@ -188,7 +259,11 @@ run_bake() {
     log "run_bake: no targets (mode=$mode) — skip"
     return 0
   fi
-  local -a args=(--allow=network.host)
+  # --allow=network.host needs buildx ≥0.17; older buildx uses hcl `network = "host"`.
+  local -a args=()
+  if docker buildx bake --help 2>&1 | grep -q -- '--allow'; then
+    args+=(--allow=network.host)
+  fi
   case "$mode" in
   never)  args+=(--set '*.pull=false') ;;
   always) args+=(--pull=true) ;;

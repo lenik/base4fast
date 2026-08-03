@@ -3,6 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:ubuntu-noble
+      args:
+        BASE_IMAGE: ubuntu:noble
+    image: b4f-ubuntu:noble

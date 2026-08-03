@@ -7,13 +7,21 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "ubuntu:jammy"
   }
   tags = [
-    "base4fast:ubuntu-jammy",
-    "base4fast:ubuntu-jammy-${VERSION}",
-    "base4fast:ubuntu-22.04",
-    "base4fast:ubuntu-22.04-${VERSION}"
+    "b4f-ubuntu:jammy",
+    "b4f-ubuntu:jammy-${arch}",
+    "b4f-ubuntu:jammy-${VERSION}-${arch}",
+    "b4f-ubuntu:22.04",
+    "b4f-ubuntu:22.04-${arch}",
+    "b4f-ubuntu:22.04-${VERSION}-${arch}",
   ]
 }

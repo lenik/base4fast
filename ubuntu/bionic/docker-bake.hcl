@@ -7,13 +7,21 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "ubuntu:bionic"
   }
   tags = [
-    "base4fast:ubuntu-bionic",
-    "base4fast:ubuntu-bionic-${VERSION}",
-    "base4fast:ubuntu-18.04",
-    "base4fast:ubuntu-18.04-${VERSION}"
+    "b4f-ubuntu:bionic",
+    "b4f-ubuntu:bionic-${arch}",
+    "b4f-ubuntu:bionic-${VERSION}-${arch}",
+    "b4f-ubuntu:18.04",
+    "b4f-ubuntu:18.04-${arch}",
+    "b4f-ubuntu:18.04-${VERSION}-${arch}",
   ]
 }

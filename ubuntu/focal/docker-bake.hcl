@@ -7,13 +7,21 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "ubuntu:focal"
   }
   tags = [
-    "base4fast:ubuntu-focal",
-    "base4fast:ubuntu-focal-${VERSION}",
-    "base4fast:ubuntu-20.04",
-    "base4fast:ubuntu-20.04-${VERSION}"
+    "b4f-ubuntu:focal",
+    "b4f-ubuntu:focal-${arch}",
+    "b4f-ubuntu:focal-${VERSION}-${arch}",
+    "b4f-ubuntu:20.04",
+    "b4f-ubuntu:20.04-${arch}",
+    "b4f-ubuntu:20.04-${VERSION}-${arch}",
   ]
 }

@@ -7,13 +7,21 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "ubuntu:resolute"
   }
   tags = [
-    "base4fast:ubuntu-resolute",
-    "base4fast:ubuntu-resolute-${VERSION}",
-    "base4fast:ubuntu-26.04",
-    "base4fast:ubuntu-26.04-${VERSION}"
+    "b4f-ubuntu:resolute",
+    "b4f-ubuntu:resolute-${arch}",
+    "b4f-ubuntu:resolute-${VERSION}-${arch}",
+    "b4f-ubuntu:26.04",
+    "b4f-ubuntu:26.04-${arch}",
+    "b4f-ubuntu:26.04-${VERSION}-${arch}",
   ]
 }

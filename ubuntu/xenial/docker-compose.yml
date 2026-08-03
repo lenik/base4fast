@@ -3,6 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:ubuntu-xenial
+      args:
+        BASE_IMAGE: ubuntu:xenial
+    image: b4f-ubuntu:xenial

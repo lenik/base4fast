@@ -3,6 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:ubuntu-focal
+      args:
+        BASE_IMAGE: ubuntu:focal
+    image: b4f-ubuntu:focal

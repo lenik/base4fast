@@ -7,13 +7,21 @@ group "default" {
 }
 
 target "base-image" {
-  contexts = {
-    host_opt = "/opt"
+  network = "host"
+  name = "base-image-${arch}"
+  matrix = {
+    arch = ["amd64", "arm64"]
+  }
+  platforms = ["linux/${arch}"]
+  args = {
+    BASE_IMAGE = "ubuntu:xenial"
   }
   tags = [
-    "base4fast:ubuntu-xenial",
-    "base4fast:ubuntu-xenial-${VERSION}",
-    "base4fast:ubuntu-16.04",
-    "base4fast:ubuntu-16.04-${VERSION}"
+    "b4f-ubuntu:xenial",
+    "b4f-ubuntu:xenial-${arch}",
+    "b4f-ubuntu:xenial-${VERSION}-${arch}",
+    "b4f-ubuntu:16.04",
+    "b4f-ubuntu:16.04-${arch}",
+    "b4f-ubuntu:16.04-${VERSION}-${arch}",
   ]
 }

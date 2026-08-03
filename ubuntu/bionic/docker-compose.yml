@@ -3,6 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:ubuntu-bionic
+      args:
+        BASE_IMAGE: ubuntu:bionic
+    image: b4f-ubuntu:bionic

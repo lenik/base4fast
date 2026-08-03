@@ -3,6 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        host_opt: /opt
-    image: base4fast:ubuntu-resolute
+      args:
+        BASE_IMAGE: ubuntu:resolute
+    image: b4f-ubuntu:resolute

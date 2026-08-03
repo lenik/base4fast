@@ -2,3 +2,5 @@
 deps/
 extern/
 vendor/
+build-*/
+__pycache__

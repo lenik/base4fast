@@ -7,6 +7,9 @@ set -euo pipefail
 
 log() { printf 'build4-prescript: %s\n' "$*" >&2; }
 
+# Dockerd pull-proxy must not apply to apt inside the build container.
+unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy 2>/dev/null || true
+
 # Merge suite apt.conf snippets (e.g. Check-Valid-Until for archives).
 if [[ -d /etc/apt/apt.conf.d/suite ]]; then
   cp -a /etc/apt/apt.conf.d/suite/. /etc/apt/apt.conf.d/
@@ -139,10 +142,17 @@ elif command -v ninja-build >/dev/null 2>&1; then
     ln -sf "$(command -v ninja-build)" /usr/local/bin/ninja 2>/dev/null || true
   fi
 fi
-# Last resort: download ninja 1.10.2 (may fail on old TLS stacks).
-# Skip when a new-enough mounted binary already works.
-if ! ninja --version 2>/dev/null | grep -qE '^1\.(1[0-9]|[6-9])'; then
-  log "installing ninja 1.10.2 binary (distro ninja too old for Meson)"
+# Last resort: download a new-enough ninja (may fail on old TLS stacks).
+# Skip when a new-enough mounted/system binary already works.
+# ninja-linux.zip is amd64-only; aarch64 assets start at newer releases.
+# Meson 0.54+ defaults detect_ninja(version='1.7') — xenial's 1.5.1 is too old.
+_ninja_ok_ver() { ninja --version 2>/dev/null | grep -qE '^1\.(1[0-9]|[7-9])'; }
+if ! _ninja_ok_ver; then
+  _ninja_asset=ninja-linux.zip
+  case "$(uname -m)" in
+  aarch64|arm64) _ninja_asset=ninja-linux-aarch64.zip ;;
+  esac
+  log "installing ninja ≥1.7 ($_ninja_asset; Meson 0.54+ needs ≥1.7)"
   apt-get install -y --no-install-recommends curl ca-certificates unzip 2>/dev/null || true
   _ninja_ok=0
   # Prefer writing beside a RO mount rather than failing unzip into it.
@@ -150,27 +160,49 @@ if ! ninja --version 2>/dev/null | grep -qE '^1\.(1[0-9]|[6-9])'; then
   if [[ -e /usr/local/bin/ninja ]] && ! touch /usr/local/bin/ninja 2>/dev/null; then
     _ninja_dest=/tmp
   fi
-  for _url in \
-    https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip \
-    https://ghproxy.net/https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip \
-    https://ghfast.top/https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip
-  do
-    if curl -fsSL --retry 2 --connect-timeout 20 -o /tmp/ninja-linux.zip "$_url"; then
-      unzip -o -q /tmp/ninja-linux.zip -d "$_ninja_dest" && _ninja_ok=1 && break
+  for _ver in 1.12.1 1.11.1 1.10.2; do
+    # 1.10.2 has no aarch64 asset — skip that combo.
+    if [[ "$_ninja_asset" == *aarch64* && "$_ver" == 1.10.2 ]]; then
+      continue
     fi
+    for _url in \
+      "https://github.com/ninja-build/ninja/releases/download/v${_ver}/${_ninja_asset}" \
+      "https://ghproxy.net/https://github.com/ninja-build/ninja/releases/download/v${_ver}/${_ninja_asset}" \
+      "https://ghfast.top/https://github.com/ninja-build/ninja/releases/download/v${_ver}/${_ninja_asset}"
+    do
+      if curl -fsSL --retry 2 --connect-timeout 20 -o /tmp/ninja-linux.zip "$_url"; then
+        unzip -o -q /tmp/ninja-linux.zip -d "$_ninja_dest" || continue
+        chmod a+x "$_ninja_dest/ninja"
+        if "$_ninja_dest/ninja" --version >/dev/null 2>&1; then
+          _ninja_ok=1
+          log "installed ninja $("$_ninja_dest/ninja" --version | head -1) from $_url"
+          break 2
+        fi
+        rm -f "$_ninja_dest/ninja"
+      fi
+    done
   done
   if [[ "$_ninja_ok" -eq 1 ]]; then
-    chmod a+x "$_ninja_dest/ninja"
     if [[ "$_ninja_dest" != /usr/local/bin ]]; then
       export PATH="${_ninja_dest}:${PATH}"
     fi
+  else
+    # Drop a broken (wrong-arch) /usr/local/bin/ninja so PATH can see distro ninja.
+    if [[ -e /usr/local/bin/ninja ]] && ! /usr/local/bin/ninja --version >/dev/null 2>&1; then
+      rm -f /usr/local/bin/ninja 2>/dev/null || true
+    fi
+    log "warning: could not install ninja ≥1.7; Meson 0.54+ may fail"
   fi
 fi
 hash -r 2>/dev/null || true
 export PATH="/usr/local/bin:/usr/bin:${PATH}"
+if ! command -v ninja >/dev/null 2>&1 && command -v ninja-build >/dev/null 2>&1; then
+  ln -sf "$(command -v ninja-build)" /usr/local/bin/ninja 2>/dev/null || true
+  hash -r 2>/dev/null || true
+fi
 
 command -v meson >/dev/null
 command -v ninja >/dev/null || command -v ninja-build >/dev/null
-log "ready: meson $(meson --version | head -1), ninja $(ninja --version 2>/dev/null || ninja-build --version | head -1)"
+log "ready: meson $(meson --version | head -1), ninja $(ninja --version 2>/dev/null || ninja-build --version 2>/dev/null | head -1)"
 # Make Meson backends find ninja even if only ninja-build exists.
 export NINJA="${NINJA:-$(command -v ninja || command -v ninja-build)}"

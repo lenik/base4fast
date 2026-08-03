@@ -88,6 +88,24 @@ main() {
         esac
     done
 
+    # ghcr.io/loong64/debian bases use mirrors.loong64.com; regular CN debian
+    # mirrors have no loong64 Packages indexes, so skip bwsel and keep vendor sources.
+    local arch
+    arch="$(dpkg --print-architecture 2>/dev/null || true)"
+    if [[ "$arch" == loong64 ]]; then
+        log "loong64: keeping vendor/loong64 mirror sources (skip bwsel for ${distro_spec})"
+        if [[ "$config_only" -eq 0 ]]; then
+            apt-get \
+                -o Acquire::Retries=3 \
+                -o Acquire::http::Timeout=30 \
+                -o Acquire::https::Timeout=30 \
+                update
+        else
+            log "skipping apt-get update (--config-only)"
+        fi
+        return 0
+    fi
+
     purge_default_apt_sources
     log "running lrm bwsel for ${distro_spec}${*:+ ($*)}"
     lrm --distro "$distro_spec" bwsel "$@"

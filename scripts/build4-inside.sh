@@ -9,16 +9,41 @@ set -euo pipefail
 log() { printf 'build4-inside: %s\n' "$*" >&2; }
 die() { printf 'build4-inside: error: %s\n' "$*" >&2; exit 1; }
 
-export PATH="/usr/local/bin:${PATH}"
-export LANG="${LANG:-C.UTF-8}"
-export LC_ALL="${LC_ALL:-C.UTF-8}"
-# Prefer a real ninja binary Meson can version-detect.
-if command -v ninja >/dev/null 2>&1; then
-  export NINJA="$(command -v ninja)"
-elif command -v ninja-build >/dev/null 2>&1; then
-  ln -sf "$(command -v ninja-build)" /usr/local/bin/ninja
-  export NINJA=/usr/local/bin/ninja
-fi
+export PATH="/usr/local/bin:/usr/bin:${PATH}"
+# Prefer a UTF-8 locale when available (xenial often lacks C.UTF-8; an invalid
+# LC_ALL breaks Meson's ninja subprocess probe under qemu).
+for _loc in C.UTF-8 C.utf8 en_US.UTF-8 C; do
+  if LC_ALL="$_loc" locale >/dev/null 2>&1; then
+    export LANG="$_loc" LC_ALL="$_loc"
+    break
+  fi
+done
+# Prefer a real ninja binary Meson can version-detect (name must be `ninja`).
+# Under qemu, symlinks to ninja-build sometimes fail Meson's probe — use a
+# tiny wrapper or a hard copy instead.
+ensure_ninja() {
+  if command -v ninja >/dev/null 2>&1 && ninja --version >/dev/null 2>&1; then
+    export NINJA="$(command -v ninja)"
+    return 0
+  fi
+  if command -v ninja-build >/dev/null 2>&1; then
+    local nb
+    nb="$(command -v ninja-build)"
+    rm -f /usr/local/bin/ninja 2>/dev/null || true
+    if cp -f "$nb" /usr/local/bin/ninja 2>/dev/null; then
+      chmod a+x /usr/local/bin/ninja
+    else
+      printf '%s\n' '#!/bin/sh' "exec $nb \"\$@\"" >/usr/local/bin/ninja
+      chmod a+x /usr/local/bin/ninja
+    fi
+    hash -r 2>/dev/null || true
+    export NINJA=/usr/local/bin/ninja
+  fi
+  command -v ninja >/dev/null 2>&1 || die "ninja not found (need ninja or ninja-build)"
+  ninja --version >/dev/null 2>&1 || die "ninja not executable: $NINJA"
+  log "using ninja $($NINJA --version | head -1) at $NINJA"
+}
+ensure_ninja
 
 PREFIX=/out
 BUILD=/tmp/lrm-build

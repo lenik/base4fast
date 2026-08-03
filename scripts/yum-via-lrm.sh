@@ -3,7 +3,7 @@
 # Must run before package installs in China; never keep vendor default repos.
 #
 # Usage: yum-via-lrm.sh DISTRO_SPEC [bwsel options...]
-#   DISTRO_SPEC  e.g. centos:7, centos:9, centos:10
+#   DISTRO_SPEC  e.g. centos:7, rocky:9, openeuler:22.03
 #   extra args   forwarded to `lrm bwsel` (e.g. --everything --epel)
 
 set -euo pipefail

@@ -1,0 +1,508 @@
+#!/usr/bin/env bash
+# configrepo — add local iso-sources mirror for the running OS, then update.
+#
+# Discovers version dirs by GET + parsing index.html, e.g.:
+#   http://183.131.83.99:1506/debian/   → trixie, stable, …
+#   http://183.131.83.99:1506/ubuntu/
+#   http://183.131.83.99:1506/centos/   → stream-10, stream-9, …
+#   http://183.131.83.99:1506/rocky/
+#   http://183.131.83.99:1506/sles/     (or opensuse/leap/)
+#   http://183.131.83.99:1506/openeuler/
+#
+# Writes:
+#   Debian/Ubuntu: /etc/apt/sources.list.d/configrepo.list
+#   RPM (yum/dnf): /etc/yum.repos.d/configrepo.repo
+#   SUSE (zypper): /etc/zypp/repos.d/configrepo.repo
+#
+# Soft-fail (exit 0) when this OS has no matching local ISO tree.
+#
+# Env:
+#   REPO_HOST (default 183.131.83.99)  REPO_PORT (1506)  REPO_SCHEME (http)
+#   REPO_AUTH_USER / REPO_AUTH_PASS    (guest / V6RiHvGv5a29; empty → no auth)
+#   SKIP_UPGRADE=1                     write sources only
+#   STRICT=1                           exit 1 when no matching suite
+set -euo pipefail
+
+REPO_HOST="${REPO_HOST:-183.131.83.99}"
+REPO_PORT="${REPO_PORT:-1506}"
+REPO_SCHEME="${REPO_SCHEME:-http}"
+REPO_PATH="${REPO_PATH:-}"
+REPO_AUTH_USER="${REPO_AUTH_USER:-guest}"
+REPO_AUTH_PASS="${REPO_AUTH_PASS:-V6RiHvGv5a29}"
+SKIP_UPGRADE="${SKIP_UPGRADE:-0}"
+STRICT="${STRICT:-0}"
+
+LEGACY_APT_FILE=/etc/apt/sources.list.d/kolla1-local.list
+
+log() { printf 'configrepo: %s\n' "$*" >&2; }
+die() { log "ERROR: $*"; exit 1; }
+soft_die() {
+  log "WARN: $* — skipping local mirror"
+  [[ "${STRICT}" == "1" ]] && exit 1
+  exit 0
+}
+
+need_root() {
+  [[ "${EUID:-$(id -u)}" -eq 0 ]] || die "run as root (sudo bash $0)"
+}
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+_repo_authority() {
+  if [[ -n "${REPO_AUTH_USER}" && -n "${REPO_AUTH_PASS}" ]]; then
+    printf '%s:%s@%s:%s' "${REPO_AUTH_USER}" "${REPO_AUTH_PASS}" "${REPO_HOST}" "${REPO_PORT}"
+  else
+    printf '%s:%s' "${REPO_HOST}" "${REPO_PORT}"
+  fi
+}
+
+init_repo_base() {
+  REPO_BASE="${REPO_SCHEME}://$(_repo_authority)${REPO_PATH}"
+  REPO_BASE="${REPO_BASE%/}"
+}
+
+http_get() {
+  local url="$1" curl_bin=""
+  if [[ -x /usr/bin/curl ]]; then
+    curl_bin=/usr/bin/curl
+  elif have curl; then
+    curl_bin=$(type -P curl 2>/dev/null || command -v curl)
+  fi
+  if [[ -n "${curl_bin}" ]]; then
+    if [[ -n "${REPO_AUTH_USER}" && -n "${REPO_AUTH_PASS}" ]]; then
+      "${curl_bin}" -fsSL --connect-timeout 5 --max-time 30 \
+        -u "${REPO_AUTH_USER}:${REPO_AUTH_PASS}" "$url" 2>/dev/null || true
+    else
+      "${curl_bin}" -fsSL --connect-timeout 5 --max-time 30 "$url" 2>/dev/null || true
+    fi
+  elif have wget; then
+    wget -qO- --timeout=30 --user="${REPO_AUTH_USER}" --password="${REPO_AUTH_PASS}" "$url" 2>/dev/null || true
+  fi
+}
+
+repo_ok() {
+  local url="$1"
+  [[ -n "$(http_get "$url")" ]]
+}
+
+index_dirs() {
+  local url="$1"
+  http_get "$url" | grep -oE 'href="[^"]+/"' | sed -E 's/^href="//; s/"$//; s|/$||' \
+    | grep -vE '^\.\.?$|^$' | sort -u
+}
+
+# List version dirs under /<family>/ (skip ISO-internal noise).
+family_versions() {
+  local family="$1" d
+  for d in $(index_dirs "${REPO_BASE}/${family}/"); do
+    case "$d" in
+    EFI|boot|css|dists|doc|firmware|install|install.*|isolinux|pics|pool|debian|apache|docs|repodata|BaseOS|AppStream|Minimal|Packages|media.repo|suse|live) continue ;;
+    esac
+    echo "$d"
+  done | sort -u
+}
+
+# Match want against listed versions: exact, then prefix, then contains.
+match_version() {
+  local want="$1"
+  shift
+  local d
+  for d in "$@"; do
+    [[ "$d" == "$want" ]] && { echo "$d"; return; }
+  done
+  for d in "$@"; do
+    [[ "$d" == "${want}-"* || "$d" == "${want}."* ]] && { echo "$d"; return; }
+  done
+  for d in "$@"; do
+    [[ "$d" == *"${want}"* ]] && { echo "$d"; return; }
+  done
+  return 1
+}
+
+load_os() {
+  [[ -f /etc/os-release ]] || die "missing /etc/os-release"
+  # shellcheck disable=SC1091
+  . /etc/os-release
+  ID="${ID:-unknown}"
+  VERSION_ID="${VERSION_ID:-}"
+  VERSION_CODENAME="${VERSION_CODENAME:-}"
+  ID_LIKE="${ID_LIKE:-}"
+  PRETTY_NAME="${PRETTY_NAME:-}"
+}
+
+debian_codename() {
+  if [[ -n "${VERSION_CODENAME}" ]]; then
+    echo "${VERSION_CODENAME}"
+    return
+  fi
+  if [[ -f /etc/debian_version ]]; then
+    case "$(cut -d. -f1 </etc/debian_version)" in
+      13) echo trixie; return ;;
+      12) echo bookworm; return ;;
+      11) echo bullseye; return ;;
+      10) echo buster; return ;;
+      9)  echo stretch; return ;;
+    esac
+  fi
+  echo ""
+}
+
+release_components() {
+  local url="$1" body comps
+  body="$(http_get "${url%/}/Release")"
+  comps="$(printf '%s\n' "${body}" | awk -F': ' '/^Components:/{print $2; exit}')"
+  [[ -n "${comps}" ]] && { echo "${comps}"; return; }
+  echo "main"
+}
+
+write_apt_list() {
+  local url="$1" suite="$2" components="$3"
+  local file=/etc/apt/sources.list.d/configrepo.list
+  rm -f "${LEGACY_APT_FILE}" \
+        /etc/apt/sources.list.d/configrepo.list \
+        /etc/apt/sources.list.d/configrepo.sources
+  log "apt: ${suite} [${components}] -> ${file}"
+  log "apt: URI ${url}"
+  cat >"${file}" <<EOF
+# local iso-sources (configrepo)
+deb [trusted=yes] ${url} ${suite} ${components}
+EOF
+}
+
+apt_refresh() {
+  export DEBIAN_FRONTEND=noninteractive
+  if ! apt-get update; then
+    log "WARN: apt-get update failed — keeping configrepo.list; continuing"
+    [[ "${STRICT}" == "1" ]] && exit 1
+    return 0
+  fi
+  if [[ "${SKIP_UPGRADE}" -ne 1 ]]; then
+    apt-get upgrade -y || log "WARN: apt-get upgrade failed — continuing"
+  fi
+}
+
+# --- Debian / Ubuntu (…/<family>/<version>/ with dists/<suite>/) ------------
+
+configure_apt_family() {
+  local family="$1" want="$2"
+  local versions version url suite components
+  mapfile -t versions < <(family_versions "$family")
+  [[ ${#versions[@]} -gt 0 ]] || soft_die "empty index ${REPO_BASE}/${family}/"
+
+  log "${family} index versions: ${versions[*]}"
+  version="$(match_version "$want" "${versions[@]}")" || \
+    soft_die "no matching version for '${want}' under ${REPO_BASE}/${family}/"
+
+  url="${REPO_BASE}/${family}/${version}/"
+  suite="$want"
+  if ! repo_ok "${url}dists/${suite}/Release"; then
+    if repo_ok "${url}dists/${version}/Release"; then
+      suite="${version}"
+    else
+      # Live-server ISOs often lack apt dists/ — soft-skip
+      soft_die "no dists/${want}/Release under ${url} (not an apt mirror ISO?)"
+    fi
+  fi
+
+  components="$(release_components "${url}dists/${suite}")"
+  write_apt_list "${url}" "${suite}" "${components}"
+  apt_refresh
+}
+
+configure_debian() {
+  local codename
+  codename="$(debian_codename)"
+  [[ -n "${codename}" ]] || soft_die "cannot determine Debian codename"
+  configure_apt_family debian "$codename"
+}
+
+configure_ubuntu() {
+  local codename
+  codename="$(debian_codename)"
+  [[ -n "${codename}" ]] || soft_die "cannot determine Ubuntu codename"
+  configure_apt_family ubuntu "$codename"
+}
+
+# --- RPM helpers ------------------------------------------------------------
+
+yum_refresh() {
+  if have dnf; then
+    dnf clean all
+    dnf makecache || true
+    [[ "${SKIP_UPGRADE}" -eq 1 ]] || dnf upgrade -y || true
+  elif have yum; then
+    yum clean all
+    yum makecache || true
+    [[ "${SKIP_UPGRADE}" -eq 1 ]] || yum update -y || true
+  else
+    die "need dnf or yum"
+  fi
+}
+
+write_yum_repo() {
+  local file=/etc/yum.repos.d/configrepo.repo
+  mkdir -p /etc/yum.repos.d
+  cat >"${file}"
+  log "yum: wrote ${file}"
+}
+
+# CentOS Stream / classic: GET /centos/ → stream-10, stream-9, 7, …
+configure_centos() {
+  local versions version url want
+  mapfile -t versions < <(family_versions centos)
+  [[ ${#versions[@]} -gt 0 ]] || soft_die "empty index ${REPO_BASE}/centos/"
+
+  log "centos index versions: ${versions[*]}"
+
+  # Prefer stream-N for Stream; else VERSION_ID
+  if grep -qiE 'stream' /etc/os-release 2>/dev/null || [[ "${PRETTY_NAME:-}" == *[Ss]tream* ]]; then
+    want="stream-${VERSION_ID%%.*}"
+  else
+    want="${VERSION_ID%%.*}"
+  fi
+
+  version="$(match_version "$want" "${versions[@]}")" || \
+    soft_die "no matching centos version for '${want}'"
+
+  url="${REPO_BASE}/centos/${version}"
+  if repo_ok "${url}/BaseOS/repodata/repomd.xml"; then
+    log "centos: ${version} (BaseOS+AppStream)"
+    write_yum_repo <<EOF
+[configrepo-baseos]
+name=CentOS local BaseOS (iso-sources)
+baseurl=${url}/BaseOS/
+enabled=1
+gpgcheck=0
+
+[configrepo-appstream]
+name=CentOS local AppStream (iso-sources)
+baseurl=${url}/AppStream/
+enabled=1
+gpgcheck=0
+EOF
+  elif repo_ok "${url}/repodata/repomd.xml"; then
+    log "centos: ${version} (flat repodata)"
+    write_yum_repo <<EOF
+[configrepo]
+name=CentOS local (iso-sources)
+baseurl=${url}/
+enabled=1
+gpgcheck=0
+EOF
+  elif repo_ok "${url}/Packages/" || repo_ok "${url}/Packages"; then
+    # CentOS 6/7 DVD layout: Packages/ + repodata/
+    log "centos: ${version} (Packages/ DVD layout)"
+    write_yum_repo <<EOF
+[configrepo]
+name=CentOS local (iso-sources)
+baseurl=${url}/
+enabled=1
+gpgcheck=0
+EOF
+  elif repo_ok "${url}/CentOS/" || repo_ok "${url}/repodata/repomd.xml"; then
+    # CentOS 5 DVD layout: RPMs under CentOS/ + root repodata/
+    log "centos: ${version} (CentOS/ DVD layout)"
+    write_yum_repo <<EOF
+[configrepo]
+name=CentOS local (iso-sources)
+baseurl=${url}/
+enabled=1
+gpgcheck=0
+EOF
+  else
+    soft_die "no BaseOS/Packages/CentOS/repodata under ${url}/"
+  fi
+  yum_refresh
+}
+
+configure_rocky() {
+  local versions version url want="${VERSION_ID%%.*}"
+  mapfile -t versions < <(family_versions rocky)
+  [[ ${#versions[@]} -gt 0 ]] || soft_die "empty index ${REPO_BASE}/rocky/"
+  log "rocky index versions: ${versions[*]}"
+  version="$(match_version "$want" "${versions[@]}")" || \
+    soft_die "no matching rocky version for '${want}'"
+  url="${REPO_BASE}/rocky/${version}"
+  if repo_ok "${url}/BaseOS/repodata/repomd.xml"; then
+    write_yum_repo <<EOF
+[configrepo-baseos]
+name=Rocky local BaseOS (iso-sources)
+baseurl=${url}/BaseOS/
+enabled=1
+gpgcheck=0
+
+[configrepo-appstream]
+name=Rocky local AppStream (iso-sources)
+baseurl=${url}/AppStream/
+enabled=1
+gpgcheck=0
+EOF
+  elif repo_ok "${url}/Minimal/repodata/repomd.xml"; then
+    # Rocky "minimal" ISOs (~2–3 GiB) ship a Minimal/ tree, not full DVD BaseOS+AppStream.
+    write_yum_repo <<EOF
+[configrepo-minimal]
+name=Rocky local Minimal (iso-sources)
+baseurl=${url}/Minimal/
+enabled=1
+gpgcheck=0
+EOF
+  elif repo_ok "${url}/repodata/repomd.xml"; then
+    write_yum_repo <<EOF
+[configrepo]
+name=Rocky local (iso-sources)
+baseurl=${url}/
+enabled=1
+gpgcheck=0
+EOF
+  else
+    soft_die "no BaseOS/Minimal/repodata under ${url}/"
+  fi
+  log "rocky: ${version}"
+  yum_refresh
+}
+
+configure_openeuler() {
+  local versions version url want sp=""
+  if [[ -f /etc/openEuler-release ]] && grep -qE 'SP[0-9]+' /etc/openEuler-release 2>/dev/null; then
+    sp=$(grep -oE 'SP[0-9]+' /etc/openEuler-release | head -1)
+  elif [[ "${PRETTY_NAME:-}" =~ SP([0-9]+) ]]; then
+    sp="SP${BASH_REMATCH[1]}"
+  fi
+  case "${VERSION_ID}" in
+  20.03|20) want=20.03 ;;
+  22.03|22) want="22.03${sp:+-${sp}}" ;;
+  24.03|24) want="24.03${sp:+-${sp}}" ;;
+  *) want="${VERSION_ID}" ;;
+  esac
+
+  mapfile -t versions < <(family_versions openeuler)
+  [[ ${#versions[@]} -gt 0 ]] || soft_die "empty index ${REPO_BASE}/openeuler/"
+  log "openeuler index versions: ${versions[*]}"
+  version="$(match_version "$want" "${versions[@]}")" || \
+    soft_die "no matching openeuler version for '${want}'"
+  url="${REPO_BASE}/openeuler/${version}/"
+  repo_ok "${url}repodata/repomd.xml" || soft_die "no repodata under ${url}"
+  write_yum_repo <<EOF
+[configrepo-openeuler]
+name=openEuler local (iso-sources)
+baseurl=${url}
+enabled=1
+gpgcheck=0
+EOF
+  log "openeuler: ${version}"
+  yum_refresh
+}
+
+# --- SUSE / SLES / Leap -----------------------------------------------------
+
+configure_sles() {
+  local versions version url want family=sles
+  # Prefer /sles/, fall back to /opensuse/leap/
+  mapfile -t versions < <(family_versions sles)
+  if [[ ${#versions[@]} -eq 0 ]]; then
+    family=opensuse
+    mapfile -t versions < <(family_versions opensuse)
+    # opensuse/leap/<ver> nested
+    if [[ ${#versions[@]} -gt 0 ]]; then
+      :
+    fi
+  fi
+
+  want="${VERSION_ID}"
+  # SLES 15.2 → try 15.2, 15.6, 15.5, 15
+  local candidates=("$want" "${want%.*}" "${VERSION_ID%%.*}")
+
+  if [[ "$family" == "sles" && ${#versions[@]} -gt 0 ]]; then
+    log "sles index versions: ${versions[*]}"
+    version=""
+    for want in "${candidates[@]}"; do
+      version="$(match_version "$want" "${versions[@]}")" && break
+    done
+    [[ -n "${version}" ]] || soft_die "no matching sles version for '${VERSION_ID}'"
+    url="${REPO_BASE}/sles/${version}/"
+  else
+    # opensuse/leap/<ver>
+    mapfile -t versions < <(family_versions opensuse/leap 2>/dev/null || family_versions opensuse)
+    # If index is opensuse/ with leap/ child:
+    if repo_ok "${REPO_BASE}/opensuse/leap/"; then
+      mapfile -t versions < <(family_versions opensuse/leap)
+      log "opensuse/leap versions: ${versions[*]}"
+      version=""
+      for want in "${candidates[@]}" 15.6 15.5 15.4; do
+        version="$(match_version "$want" "${versions[@]}")" && break
+      done
+      [[ -n "${version}" ]] || soft_die "no matching opensuse leap for '${VERSION_ID}'"
+      url="${REPO_BASE}/opensuse/leap/${version}/"
+    else
+      soft_die "no sles/ or opensuse/leap/ under ${REPO_BASE}/"
+    fi
+  fi
+
+  local file=/etc/zypp/repos.d/configrepo.repo
+  mkdir -p /etc/zypp/repos.d
+  # Leap DVD usually has /suse/ or repodata at root
+  if repo_ok "${url}repodata/repomd.xml" || repo_ok "${url}suse/repodata/repomd.xml"; then
+    local base="${url}"
+    repo_ok "${url}suse/repodata/repomd.xml" && base="${url}suse/"
+    log "zypper: ${base} -> ${file}"
+    cat >"${file}" <<EOF
+[configrepo]
+name=local iso-sources (SUSE)
+enabled=1
+autorefresh=0
+baseurl=${base}
+type=rpm-md
+gpgcheck=0
+EOF
+  else
+    soft_die "no zypper repodata under ${url}"
+  fi
+
+  if have zypper; then
+    zypper --non-interactive refresh || true
+    [[ "${SKIP_UPGRADE}" -eq 1 ]] || zypper --non-interactive update || true
+  fi
+}
+
+main() {
+  need_root
+  init_repo_base
+  log "repo base ${REPO_SCHEME}://${REPO_HOST}:${REPO_PORT}${REPO_PATH}/"
+
+  if ! { [[ -x /usr/bin/curl ]] || have curl || have wget; }; then
+    soft_die "need curl or wget to discover local mirror"
+  fi
+  if ! repo_ok "${REPO_BASE}/" && ! repo_ok "${REPO_BASE}/index.html"; then
+    soft_die "cannot reach ${REPO_BASE}"
+  fi
+
+  load_os
+  log "detected ID=${ID} VERSION_ID=${VERSION_ID} VERSION_CODENAME=${VERSION_CODENAME:-n/a}"
+
+  case "${ID}" in
+  debian) configure_debian ;;
+  ubuntu) configure_ubuntu ;;
+  centos) configure_centos ;;
+  rocky) configure_rocky ;;
+  openEuler|openeuler) configure_openeuler ;;
+  sles|sled|opensuse*|suse*) configure_sles ;;
+  rhel|almalinux|fedora)
+    soft_die "no dedicated tree for ID=${ID} (use rocky/centos layout if applicable)"
+    ;;
+  *)
+    if [[ "${ID_LIKE:-}" == *"suse"* ]]; then
+      configure_sles
+    elif [[ "${ID_LIKE:-}" == *"debian"* ]]; then
+      configure_debian
+    elif [[ "${ID_LIKE:-}" == *"rhel"* ]] || [[ "${ID_LIKE:-}" == *"fedora"* ]]; then
+      configure_centos
+    else
+      soft_die "unsupported OS ID=${ID}"
+    fi
+    ;;
+  esac
+
+  log "done"
+}
+
+main "$@"

@@ -1,0 +1,24 @@
+{
+  "name": "b4f-minimal",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Seed package list for the shared pnpm store in b4f-rockynode (mpss, cicc, …)",
+  "dependencies": {
+    "@fastify/cors": "11.3.0",
+    "@fastify/jwt": "9.1.0",
+    "@fastify/multipart": "9.4.0",
+    "@prisma/client": "6.19.3",
+    "argon2": "0.43.1",
+    "bcryptjs": "3.0.3",
+    "decimal.js": "10.6.0",
+    "exceljs": "4.4.0",
+    "fastify": "5.11.0",
+    "fastify-plugin": "5.1.0",
+    "pdfkit": "0.17.2",
+    "pino": "9.14.0",
+    "prisma": "6.19.3",
+    "sharp": "0.35.3",
+    "tsx": "4.23.5",
+    "zod": "3.25.76"
+  }
+}

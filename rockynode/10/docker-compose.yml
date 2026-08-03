@@ -1,0 +1,11 @@
+services:
+  rockynode:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      shm_size: "256m"
+      args:
+        # Parent may have a registry namespace (compose will pull if needed).
+        BASE_IMAGE: ${BASE_IMAGE:-183.131.83.99:1244/b4f-rocky:10}
+    # Output: local short tag only.
+    image: ${IMAGE:-b4f-rockynode:10}

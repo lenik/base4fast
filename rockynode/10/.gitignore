@@ -1,0 +1,4 @@
+vendor/
+*.rpm
+node-*.tar.xz
+nvm-*.tar.gz
